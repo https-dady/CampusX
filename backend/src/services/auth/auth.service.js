@@ -3,6 +3,13 @@ import jwt from "jsonwebtoken";
 import User from "../../models/user.model.js";
 import env from "../../config/env.js";
 
+import {
+  generateOtp,
+  hashOtp,
+  getOtpExpiry,
+} from "../../utils/otp.util.js";
+
+
 const generateToken = (userId) => {
   return jwt.sign(
     { userId },
@@ -20,12 +27,18 @@ export const signupUser = async ({ name, email, password }) => {
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
+  const otp = generateOtp();
+  const otpHash = hashOtp(otp);
+  const otpExpiresAt = getOtpExpiry();
+
   const user = await User.create({
     name,
     email,
     password: hashedPassword,
     authProvider: "local",
     isEmailVerified: false,
+    otpHash,
+    otpExpiresAt,
   });
 
   return {
@@ -37,6 +50,7 @@ export const signupUser = async ({ name, email, password }) => {
       isEmailVerified: user.isEmailVerified,
     },
     token: generateToken(user._id.toString()),
+    otp,
   };
 };
 
