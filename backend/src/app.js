@@ -7,6 +7,7 @@ import mlRoutes from "./routes/ml.routes.js";
 
 import n8nRoutes from "./routes/n8n.routes.js";
 
+import authRoutes from "./routes/auth.routes.js";
 
 const app = express();
 
@@ -25,6 +26,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/n8n", n8nRoutes);
 
 app.use(morgan("dev"));
+
+app.use("/api/auth", authRoutes);
+
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
