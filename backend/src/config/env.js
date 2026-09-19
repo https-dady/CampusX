@@ -21,6 +21,8 @@ const env = {
 
   AI_PROVIDER:
     process.env.AI_PROVIDER || "none",
+
+  JWT_SECRET: process.env.JWT_SECRET,
 };
 
 export default env;
