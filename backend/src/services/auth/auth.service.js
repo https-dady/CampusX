@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+
 import User from "../../models/user.model.js";
 import env from "../../config/env.js";
 
@@ -9,12 +10,13 @@ import {
   getOtpExpiry,
 } from "../../utils/otp.util.js";
 
-
 const generateToken = (userId) => {
   return jwt.sign(
     { userId },
     env.JWT_SECRET,
-    { expiresIn: "7d" }
+    {
+      expiresIn: "7d",
+    }
   );
 };
 
@@ -50,6 +52,9 @@ export const signupUser = async ({ name, email, password }) => {
       isEmailVerified: user.isEmailVerified,
     },
     token: generateToken(user._id.toString()),
+
+    // Temporary for OTP testing.
+    // Remove when email delivery is integrated.
     otp,
   };
 };
@@ -79,5 +84,47 @@ export const loginUser = async ({ email, password }) => {
       isEmailVerified: user.isEmailVerified,
     },
     token: generateToken(user._id.toString()),
+  };
+};
+
+export const verifySignupOtp = async ({ email, otp }) => {
+  const user = await User.findOne({ email }).select(
+    "+otpHash +otpExpiresAt"
+  );
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (user.isEmailVerified) {
+    throw new Error("Email is already verified");
+  }
+
+  if (!user.otpHash || !user.otpExpiresAt) {
+    throw new Error("OTP is not available");
+  }
+
+  if (user.otpExpiresAt < new Date()) {
+    throw new Error("OTP has expired");
+  }
+
+  const hashedOtp = hashOtp(otp);
+
+  if (hashedOtp !== user.otpHash) {
+    throw new Error("Invalid OTP");
+  }
+
+  user.isEmailVerified = true;
+  user.otpHash = undefined;
+  user.otpExpiresAt = undefined;
+
+  await user.save();
+
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    authProvider: user.authProvider,
+    isEmailVerified: user.isEmailVerified,
   };
 };
