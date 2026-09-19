@@ -4,7 +4,9 @@ dotenv.config();
 
 const env = {
   PORT: process.env.PORT || 5000,
+
   MONGO_URI: process.env.MONGO_URI,
+
   FRONTEND_URL: process.env.FRONTEND_URL,
 
   ML_SERVICE_URL:
@@ -22,7 +24,17 @@ const env = {
   AI_PROVIDER:
     process.env.AI_PROVIDER || "none",
 
-  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_SECRET:
+    process.env.JWT_SECRET,
+
+  BREVO_API_KEY:
+    process.env.BREVO_API_KEY,
+
+  BREVO_SENDER_EMAIL:
+    process.env.BREVO_SENDER_EMAIL,
+
+  BREVO_SENDER_NAME:
+    process.env.BREVO_SENDER_NAME || "CampusX",
 };
 
 export default env;

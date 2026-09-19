@@ -10,6 +10,8 @@ import {
   getOtpExpiry,
 } from "../../utils/otp.util.js";
 
+import { sendOtpEmail } from "../email/email.service.js";
+
 const generateToken = (userId) => {
   return jwt.sign(
     { userId },
@@ -45,6 +47,17 @@ export const signupUser = async ({ name, email, password }) => {
     otpLastSentAt,
   });
 
+  try {
+    await sendOtpEmail({
+      email: user.email,
+      otp,
+    });
+  } catch (error) {
+    await User.findByIdAndDelete(user._id);
+
+    throw error;
+  }
+
   return {
     user: {
       id: user._id,
@@ -54,10 +67,6 @@ export const signupUser = async ({ name, email, password }) => {
       isEmailVerified: user.isEmailVerified,
     },
     token: generateToken(user._id.toString()),
-
-    // Temporary for OTP testing.
-    // Remove when email delivery is integrated.
-    otp,
   };
 };
 
@@ -148,7 +157,9 @@ export const resendSignupOtp = async ({ email }) => {
   const now = new Date();
 
   if (user.otpLastSentAt) {
-    const elapsedTime = now.getTime() - user.otpLastSentAt.getTime();
+    const elapsedTime =
+      now.getTime() - user.otpLastSentAt.getTime();
+
     const cooldownMs = 60 * 1000;
 
     if (elapsedTime < cooldownMs) {
@@ -166,6 +177,15 @@ export const resendSignupOtp = async ({ email }) => {
   const otpHash = hashOtp(otp);
   const otpExpiresAt = getOtpExpiry();
 
+  try {
+    await sendOtpEmail({
+      email: user.email,
+      otp,
+    });
+  } catch (error) {
+    throw error;
+  }
+
   user.otpHash = otpHash;
   user.otpExpiresAt = otpExpiresAt;
   user.otpLastSentAt = now;
@@ -174,9 +194,5 @@ export const resendSignupOtp = async ({ email }) => {
 
   return {
     email: user.email,
-
-    // Temporary for OTP testing.
-    // Remove when email delivery is integrated.
-    otp,
   };
 };
