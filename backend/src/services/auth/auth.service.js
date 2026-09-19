@@ -32,6 +32,7 @@ export const signupUser = async ({ name, email, password }) => {
   const otp = generateOtp();
   const otpHash = hashOtp(otp);
   const otpExpiresAt = getOtpExpiry();
+  const otpLastSentAt = new Date();
 
   const user = await User.create({
     name,
@@ -41,6 +42,7 @@ export const signupUser = async ({ name, email, password }) => {
     isEmailVerified: false,
     otpHash,
     otpExpiresAt,
+    otpLastSentAt,
   });
 
   return {
@@ -117,6 +119,7 @@ export const verifySignupOtp = async ({ email, otp }) => {
   user.isEmailVerified = true;
   user.otpHash = undefined;
   user.otpExpiresAt = undefined;
+  user.otpLastSentAt = undefined;
 
   await user.save();
 
@@ -126,5 +129,54 @@ export const verifySignupOtp = async ({ email, otp }) => {
     email: user.email,
     authProvider: user.authProvider,
     isEmailVerified: user.isEmailVerified,
+  };
+};
+
+export const resendSignupOtp = async ({ email }) => {
+  const user = await User.findOne({ email }).select(
+    "+otpHash +otpExpiresAt +otpLastSentAt"
+  );
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (user.isEmailVerified) {
+    throw new Error("Email is already verified");
+  }
+
+  const now = new Date();
+
+  if (user.otpLastSentAt) {
+    const elapsedTime = now.getTime() - user.otpLastSentAt.getTime();
+    const cooldownMs = 60 * 1000;
+
+    if (elapsedTime < cooldownMs) {
+      const remainingSeconds = Math.ceil(
+        (cooldownMs - elapsedTime) / 1000
+      );
+
+      throw new Error(
+        `Please wait ${remainingSeconds} seconds before requesting a new OTP`
+      );
+    }
+  }
+
+  const otp = generateOtp();
+  const otpHash = hashOtp(otp);
+  const otpExpiresAt = getOtpExpiry();
+
+  user.otpHash = otpHash;
+  user.otpExpiresAt = otpExpiresAt;
+  user.otpLastSentAt = now;
+
+  await user.save();
+
+  return {
+    email: user.email,
+
+    // Temporary for OTP testing.
+    // Remove when email delivery is integrated.
+    otp,
   };
 };

@@ -4,6 +4,7 @@ import {
   signup,
   login,
   verifyOtp,
+  resendOtp,
 } from "../controllers/auth.controller.js";
 
 import validate from "../middleware/validation.middleware.js";
@@ -32,6 +33,12 @@ router.post(
   "/verify-otp",
   validate(verifyOtpSchema),
   verifyOtp
+);
+
+router.post(
+  "/resend-otp",
+  validate(verifyOtpSchema.pick({ email: true })),
+  resendOtp
 );
 
 export default router;

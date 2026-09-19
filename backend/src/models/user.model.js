@@ -51,6 +51,11 @@ const userSchema = new mongoose.Schema(
       type: Date,
       select: false,
     },
+
+    otpLastSentAt: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,

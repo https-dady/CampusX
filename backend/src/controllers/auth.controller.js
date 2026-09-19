@@ -2,6 +2,7 @@ import {
   signupUser,
   loginUser,
   verifySignupOtp,
+  resendSignupOtp,
 } from "../services/auth/auth.service.js";
 
 export const signup = async (req, res) => {
@@ -48,6 +49,23 @@ export const verifyOtp = async (req, res) => {
       data: {
         user,
       },
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const resendOtp = async (req, res) => {
+  try {
+    const result = await resendSignupOtp(req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "OTP resent successfully",
+      data: result,
     });
   } catch (error) {
     return res.status(400).json({
