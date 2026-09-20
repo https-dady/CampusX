@@ -21,6 +21,8 @@ import skillGapRoutes from "./routes/skill-gap.routes.js";
 
 import careerRoadmapRoutes from "./routes/career-roadmap.routes.js";
 
+import personalizedRoadmapRoutes from "./routes/personalized-roadmap.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -108,6 +110,12 @@ app.use(
   "/api/career-roadmap",
   careerRoadmapRoutes
 );
+
+app.use(
+  "/api/personalized-roadmap",
+  personalizedRoadmapRoutes
+);
+
 
 /*
  * Health Check
