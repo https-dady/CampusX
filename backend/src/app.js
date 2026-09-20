@@ -15,6 +15,10 @@ import careerRoutes from "./routes/career.routes.js";
 
 import careerGoalRoutes from "./routes/career-goal.routes.js";
 
+import careerRequirementRoutes from "./routes/career-requirement.routes.js";
+
+import skillGapRoutes from "./routes/skill-gap.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -38,6 +42,11 @@ app.use(
   express.urlencoded({
     extended: true,
   })
+);
+
+app.use(
+  "/api/skill-gap",
+  skillGapRoutes
 );
 
 app.use(morgan("dev"));
@@ -86,6 +95,11 @@ app.use(
 app.use(
   "/api/career-goal",
   careerGoalRoutes
+);
+
+app.use(
+  "/api/career-requirement",
+  careerRequirementRoutes
 );
 
 /*
