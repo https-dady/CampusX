@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import CareerRoadmap from "../../models/career-roadmap.model.js";
 
 const buildCareerRoadmapUpdate = (roadmapData) => {
@@ -99,6 +100,15 @@ export const updateCareerRoadmap = async (
   roadmapId,
   roadmapData
 ) => {
+  if (!mongoose.isValidObjectId(roadmapId)) {
+    const error = new Error(
+      "Invalid career roadmap ID."
+    );
+
+    error.statusCode = 400;
+    throw error;
+  }
+
   const update =
     buildCareerRoadmapUpdate(
       roadmapData
