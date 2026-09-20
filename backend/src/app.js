@@ -19,6 +19,8 @@ import careerRequirementRoutes from "./routes/career-requirement.routes.js";
 
 import skillGapRoutes from "./routes/skill-gap.routes.js";
 
+import careerRoadmapRoutes from "./routes/career-roadmap.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -100,6 +102,11 @@ app.use(
 app.use(
   "/api/career-requirement",
   careerRequirementRoutes
+);
+
+app.use(
+  "/api/career-roadmap",
+  careerRoadmapRoutes
 );
 
 /*
