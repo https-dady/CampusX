@@ -35,6 +35,9 @@ const env = {
 
   BREVO_SENDER_NAME:
     process.env.BREVO_SENDER_NAME || "CampusX",
+
+  GOOGLE_CLIENT_ID:
+    process.env.GOOGLE_CLIENT_ID,
 };
 
 export default env;

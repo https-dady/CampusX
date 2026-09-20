@@ -10,7 +10,16 @@ import {
   getOtpExpiry,
 } from "../../utils/otp.util.js";
 
-import { sendOtpEmail } from "../email/email.service.js";
+import {
+  generateResetToken,
+  hashResetToken,
+  getResetTokenExpiry,
+} from "../../utils/reset.util.js";
+
+import {
+  sendOtpEmail,
+  sendPasswordResetOtpEmail,
+} from "../email/email.service.js";
 
 const generateToken = (userId) => {
   return jwt.sign(
@@ -22,11 +31,17 @@ const generateToken = (userId) => {
   );
 };
 
-export const signupUser = async ({ name, email, password }) => {
+export const signupUser = async ({
+  name,
+  email,
+  password,
+}) => {
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
-    throw new Error("An account with this email already exists");
+    throw new Error(
+      "An account with this email already exists"
+    );
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
@@ -70,8 +85,13 @@ export const signupUser = async ({ name, email, password }) => {
   };
 };
 
-export const loginUser = async ({ email, password }) => {
-  const user = await User.findOne({ email }).select("+password");
+export const loginUser = async ({
+  email,
+  password,
+}) => {
+  const user = await User.findOne({ email }).select(
+    "+password"
+  );
 
   if (!user || !user.password) {
     throw new Error("Invalid email or password");
@@ -98,7 +118,10 @@ export const loginUser = async ({ email, password }) => {
   };
 };
 
-export const verifySignupOtp = async ({ email, otp }) => {
+export const verifySignupOtp = async ({
+  email,
+  otp,
+}) => {
   const user = await User.findOne({ email }).select(
     "+otpHash +otpExpiresAt"
   );
@@ -141,7 +164,9 @@ export const verifySignupOtp = async ({ email, otp }) => {
   };
 };
 
-export const resendSignupOtp = async ({ email }) => {
+export const resendSignupOtp = async ({
+  email,
+}) => {
   const user = await User.findOne({ email }).select(
     "+otpHash +otpExpiresAt +otpLastSentAt"
   );
@@ -158,7 +183,8 @@ export const resendSignupOtp = async ({ email }) => {
 
   if (user.otpLastSentAt) {
     const elapsedTime =
-      now.getTime() - user.otpLastSentAt.getTime();
+      now.getTime() -
+      user.otpLastSentAt.getTime();
 
     const cooldownMs = 60 * 1000;
 
@@ -177,14 +203,10 @@ export const resendSignupOtp = async ({ email }) => {
   const otpHash = hashOtp(otp);
   const otpExpiresAt = getOtpExpiry();
 
-  try {
-    await sendOtpEmail({
-      email: user.email,
-      otp,
-    });
-  } catch (error) {
-    throw error;
-  }
+  await sendOtpEmail({
+    email: user.email,
+    otp,
+  });
 
   user.otpHash = otpHash;
   user.otpExpiresAt = otpExpiresAt;
@@ -194,5 +216,187 @@ export const resendSignupOtp = async ({ email }) => {
 
   return {
     email: user.email,
+  };
+};
+
+export const forgotPassword = async ({
+  email,
+}) => {
+  const user = await User.findOne({ email }).select(
+    "+password +resetOtpHash +resetOtpExpiresAt +resetOtpLastSentAt"
+  );
+
+  if (!user) {
+    throw new Error(
+      "No account found with this email"
+    );
+  }
+
+  if (!user.password) {
+    throw new Error(
+      "This account uses Google Sign-In. Please continue with Google."
+    );
+  }
+
+  const now = new Date();
+
+  if (user.resetOtpLastSentAt) {
+    const elapsedTime =
+      now.getTime() -
+      user.resetOtpLastSentAt.getTime();
+
+    const cooldownMs = 60 * 1000;
+
+    if (elapsedTime < cooldownMs) {
+      const remainingSeconds = Math.ceil(
+        (cooldownMs - elapsedTime) / 1000
+      );
+
+      throw new Error(
+        `Please wait ${remainingSeconds} seconds before requesting a new OTP`
+      );
+    }
+  }
+
+  const otp = generateOtp();
+  const resetOtpHash = hashOtp(otp);
+  const resetOtpExpiresAt = getOtpExpiry();
+
+  await sendPasswordResetOtpEmail({
+    email: user.email,
+    otp,
+  });
+
+  user.resetOtpHash = resetOtpHash;
+  user.resetOtpExpiresAt = resetOtpExpiresAt;
+  user.resetOtpLastSentAt = now;
+
+  // Invalidate any previously issued reset token.
+  user.resetTokenHash = undefined;
+  user.resetTokenExpiresAt = undefined;
+
+  await user.save();
+
+  return {
+    email: user.email,
+  };
+};
+
+export const verifyResetOtp = async ({
+  email,
+  otp,
+}) => {
+  const user = await User.findOne({ email }).select(
+    "+password +resetOtpHash +resetOtpExpiresAt"
+  );
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  if (!user.password) {
+    throw new Error(
+      "This account uses Google Sign-In. Please continue with Google."
+    );
+  }
+
+  if (!user.resetOtpHash || !user.resetOtpExpiresAt) {
+    throw new Error(
+      "Reset OTP is not available"
+    );
+  }
+
+  if (user.resetOtpExpiresAt < new Date()) {
+    throw new Error("Reset OTP has expired");
+  }
+
+  const hashedOtp = hashOtp(otp);
+
+  if (hashedOtp !== user.resetOtpHash) {
+    throw new Error("Invalid reset OTP");
+  }
+
+  const resetToken = generateResetToken();
+  const resetTokenHash = hashResetToken(
+    resetToken
+  );
+  const resetTokenExpiresAt =
+    getResetTokenExpiry();
+
+  user.resetTokenHash = resetTokenHash;
+  user.resetTokenExpiresAt =
+    resetTokenExpiresAt;
+
+  // OTP is one-time use.
+  user.resetOtpHash = undefined;
+  user.resetOtpExpiresAt = undefined;
+  user.resetOtpLastSentAt = undefined;
+
+  await user.save();
+
+  return {
+    resetToken,
+    expiresAt: resetTokenExpiresAt,
+  };
+};
+
+export const resetPassword = async ({
+  resetToken,
+  newPassword,
+}) => {
+  const resetTokenHash =
+    hashResetToken(resetToken);
+
+  const user = await User.findOne({
+    resetTokenHash,
+  }).select(
+    "+password +resetTokenHash +resetTokenExpiresAt"
+  );
+
+  if (!user) {
+    throw new Error(
+      "Invalid or expired password reset token"
+    );
+  }
+
+  if (
+    !user.resetTokenExpiresAt ||
+    user.resetTokenExpiresAt < new Date()
+  ) {
+    throw new Error(
+      "Invalid or expired password reset token"
+    );
+  }
+
+  if (!user.password) {
+    throw new Error(
+      "This account uses Google Sign-In. Please continue with Google."
+    );
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    newPassword,
+    12
+  );
+
+  user.password = hashedPassword;
+
+  // Password reset is now complete.
+  // Invalidate the reset token and any reset OTP state.
+  user.resetTokenHash = undefined;
+  user.resetTokenExpiresAt = undefined;
+
+  user.resetOtpHash = undefined;
+  user.resetOtpExpiresAt = undefined;
+  user.resetOtpLastSentAt = undefined;
+
+  await user.save();
+
+  return {
+    id: user._id,
+    name: user.name,
+    email: user.email,
+    authProvider: user.authProvider,
+    isEmailVerified: user.isEmailVerified,
   };
 };

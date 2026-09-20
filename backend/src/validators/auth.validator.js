@@ -45,3 +45,65 @@ export const verifyOtpSchema = z.object({
       "OTP must be a 6-digit number"
     ),
 });
+
+export const googleAuthSchema = z.object({
+  credential: z
+    .string()
+    .min(1, "Google credential is required"),
+});
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please enter a valid email")
+    .transform((value) => value.toLowerCase()),
+});
+
+export const verifyResetOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email("Please enter a valid email")
+    .transform((value) => value.toLowerCase()),
+
+  otp: z
+    .string()
+    .regex(
+      /^\d{6}$/,
+      "OTP must be a 6-digit number"
+    ),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    resetToken: z
+      .string()
+      .min(
+        1,
+        "Reset token is required"
+      ),
+
+    newPassword: z
+      .string()
+      .min(
+        8,
+        "Password must be at least 8 characters"
+      )
+      .max(128, "Password is too long"),
+
+    confirmPassword: z
+      .string()
+      .min(
+        1,
+        "Please confirm your password"
+      ),
+  })
+  .refine(
+    (data) =>
+      data.newPassword === data.confirmPassword,
+    {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    }
+  );
