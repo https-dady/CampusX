@@ -22,6 +22,10 @@ import skillGapRoutes from "./routes/skill-gap.routes.js";
 import careerRoadmapRoutes from "./routes/career-roadmap.routes.js";
 
 import personalizedRoadmapRoutes from "./routes/personalized-roadmap.routes.js";
+import learningRoutes from "./routes/learning.routes.js";
+import learningCacheRoutes from "./routes/learning-cache.routes.js";
+import learningRoadmapRoutes from "./routes/learning-roadmap.routes.js";
+
 
 const app = express();
 
@@ -116,6 +120,18 @@ app.use(
   personalizedRoadmapRoutes
 );
 
+
+app.use("/api/learning", learningRoutes);
+
+app.use(
+  "/api/learning/cache",
+  learningCacheRoutes
+);
+
+app.use(
+  "/api/learning-roadmap",
+  learningRoadmapRoutes
+);
 
 /*
  * Health Check

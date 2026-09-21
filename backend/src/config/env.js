@@ -38,6 +38,15 @@ const env = {
 
   GOOGLE_CLIENT_ID:
     process.env.GOOGLE_CLIENT_ID,
+
+  N8N_WEBHOOK_URL: 
+    process.env.N8N_WEBHOOK_URL,
+
+  N8N_LEARNING_WEBHOOK_URL: 
+    process.env.N8N_LEARNING_WEBHOOK_URL,
+
+  LEARNING_CACHE_INTERNAL_KEY:
+  process.env.LEARNING_CACHE_INTERNAL_KEY,
 };
 
 export default env;
