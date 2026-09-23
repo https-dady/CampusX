@@ -42,6 +42,8 @@ const env = {
   N8N_WEBHOOK_URL: 
     process.env.N8N_WEBHOOK_URL,
 
+  N8N_JOB_WEBHOOK_URL: process.env.N8N_JOB_WEBHOOK_URL,
+
   N8N_LEARNING_WEBHOOK_URL: 
     process.env.N8N_LEARNING_WEBHOOK_URL,
 

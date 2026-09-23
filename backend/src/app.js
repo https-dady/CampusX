@@ -27,6 +27,9 @@ import learningCacheRoutes from "./routes/learning-cache.routes.js";
 import learningRoadmapRoutes from "./routes/learning-roadmap.routes.js";
 
 
+import jobRoutes from "./routes/job.routes.js";
+import jobCacheRoutes from "./routes/job-cache.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -132,6 +135,10 @@ app.use(
   "/api/learning-roadmap",
   learningRoadmapRoutes
 );
+
+app.use("/api/jobs", jobRoutes);
+
+app.use("/api/jobs/cache", jobCacheRoutes);
 
 /*
  * Health Check
