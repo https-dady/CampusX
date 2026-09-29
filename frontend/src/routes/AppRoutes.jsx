@@ -14,6 +14,10 @@ import GeminiLiveInterviewTest from "../pages/interview/GeminiLiveInterviewTest.
 import FAQ from "../pages/FAQ.jsx";
 
 
+import WorkspaceLayout from "../components/layout/WorkspaceLayout.jsx";
+import Overview from "../pages/dashboard/Overview.jsx";
+import MyProfile from "../pages/profile/MyProfile.jsx";
+import SkillsInterests from "../pages/profile/SkillsInterests.jsx";
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -36,6 +40,36 @@ const AppRoutes = () => {
 
 
         <Route path="/faq" element={<FAQ />} />
+
+        <Route
+          path="/dashboard"
+          element={
+            <WorkspaceLayout>
+              <Overview />
+            </WorkspaceLayout>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <WorkspaceLayout>
+              <MyProfile />
+            </WorkspaceLayout>
+          }
+        />
+
+        <Route
+  path="/skills-interests"
+  element={
+    <WorkspaceLayout>
+      <SkillsInterests />
+    </WorkspaceLayout>
+  }
+/>
+
+
+
       </Routes>
     </BrowserRouter>
   );
