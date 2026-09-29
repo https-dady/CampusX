@@ -169,6 +169,40 @@ const MyProfile = () => {
 
   const pageEase = [0.22, 1, 0.36, 1];
 
+  const handleSurfaceMove = (event, intensity = 2.3) => {
+    if (prefersReducedMotion || event.pointerType !== "mouse") return;
+
+    const surface = event.currentTarget;
+    const rect = surface.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const percentX = x / rect.width - 0.5;
+    const percentY = y / rect.height - 0.5;
+
+    surface.style.transform = `
+      perspective(1100px)
+      translate3d(${percentX * 4}px, ${percentY * 4 - 2}px, 0)
+      rotateX(${-percentY * intensity}deg)
+      rotateY(${percentX * intensity}deg)
+    `;
+    surface.style.setProperty("--cursor-x", `${(x / rect.width) * 100}%`);
+    surface.style.setProperty("--cursor-y", `${(y / rect.height) * 100}%`);
+    surface.style.setProperty("--cursor-opacity", "1");
+  };
+
+  const resetSurface = (event) => {
+    if (prefersReducedMotion) return;
+
+    const surface = event.currentTarget;
+    surface.style.transform = `
+      perspective(1100px)
+      translate3d(0, 0, 0)
+      rotateX(0deg)
+      rotateY(0deg)
+    `;
+    surface.style.setProperty("--cursor-opacity", "0");
+  };
+
   return (
     <div className="mx-auto w-full max-w-[1216px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       {/* ================================================================== */}
@@ -324,8 +358,25 @@ const MyProfile = () => {
           p-6 text-white
           shadow-[0_18px_45px_rgba(6,78,59,0.12)]
           sm:p-8
-        "
-      >
+         transition-[transform,box-shadow] duration-300 ease-out will-change-transform"
+      
+              onPointerMove={(event) => handleSurfaceMove(event, 2.3)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 220px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.16), transparent 72%)",
+                }}
+              />
+
         <motion.div
           aria-hidden="true"
           animate={
@@ -1132,13 +1183,6 @@ const MyProfile = () => {
                 prefersReducedMotion ? 0 : 0.82,
               ease: pageEase,
             }}
-            whileHover={
-              prefersReducedMotion
-                ? undefined
-                : {
-                    y: -4,
-                  }
-            }
             className="
               group block
               rounded-lg
@@ -1151,8 +1195,25 @@ const MyProfile = () => {
               focus-visible:outline-2
               focus-visible:outline-offset-4
               focus-visible:outline-teal-800
-            "
-          >
+             transition-[transform,box-shadow] duration-300 ease-out will-change-transform"
+          
+              onPointerMove={(event) => handleSurfaceMove(event, 2.3)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 220px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.16), transparent 72%)",
+                }}
+              />
+
             <div className="
               flex size-10
               items-center justify-center

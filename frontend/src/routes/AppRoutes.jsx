@@ -18,6 +18,16 @@ import WorkspaceLayout from "../components/layout/WorkspaceLayout.jsx";
 import Overview from "../pages/dashboard/Overview.jsx";
 import MyProfile from "../pages/profile/MyProfile.jsx";
 import SkillsInterests from "../pages/profile/SkillsInterests.jsx";
+import CareerInsights from "../pages/career/CareerInsights.jsx";
+import Assessment from "../pages/assessment/Assessment";
+import LearningRoadmap from "../pages/learning/LearningRoadmap.jsx";
+import CoursesResources from "../pages/learning/CoursesResources";
+import ResumeAnalysis from "../pages/profile/ResumeAnalysis";
+import MockInterview from "../pages/interview/MockInterview.jsx";
+import Community from "../pages/community/Community.jsx";
+import Feedback from "../pages/feedback/Feedback.jsx";
+import Jobs from "../pages/jobs/Jobs.jsx";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -59,6 +69,16 @@ const AppRoutes = () => {
           }
         />
 
+          <Route
+  path="/assessment"
+  element={
+    <WorkspaceLayout>
+      <Assessment />
+    </WorkspaceLayout>
+  }
+/>
+
+
         <Route
   path="/skills-interests"
   element={
@@ -68,7 +88,78 @@ const AppRoutes = () => {
   }
 />
 
+<Route
+  path="/career-insights"
+  element={
+    <WorkspaceLayout>
+      <CareerInsights />
+    </WorkspaceLayout>
+  }
+/>
 
+<Route
+  path="/learning-roadmap"
+  element={
+    <WorkspaceLayout>
+      <LearningRoadmap />
+    </WorkspaceLayout>
+  }
+/>
+
+
+<Route
+  path="/courses-resources"
+  element={
+    <WorkspaceLayout>
+      <CoursesResources />
+    </WorkspaceLayout>
+  }
+/>
+
+<Route
+  path="/resume-analysis"
+  element={
+    <WorkspaceLayout>
+      <ResumeAnalysis />
+    </WorkspaceLayout>
+  }
+/>
+
+<Route
+  path="/interview/mock"
+  element={
+    <WorkspaceLayout>
+      <MockInterview />
+    </WorkspaceLayout>
+  }
+/>
+
+<Route
+  path="/community"
+  element={
+    <WorkspaceLayout>
+      <Community />
+    </WorkspaceLayout>
+  }
+/>
+
+
+<Route
+  path="/feedback"
+  element={
+    <WorkspaceLayout>
+      <Feedback />
+    </WorkspaceLayout>
+  }
+/>
+<Route
+  path="/jobs"
+  element={
+    <WorkspaceLayout>
+      <Jobs />
+    </WorkspaceLayout>
+  }
+/>
 
       </Routes>
     </BrowserRouter>

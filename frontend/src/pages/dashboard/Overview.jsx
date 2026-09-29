@@ -97,6 +97,40 @@ const Overview = () => {
     `;
   };
 
+  const handleSurfaceMove = (event, intensity = 2.2) => {
+    if (prefersReducedMotion || event.pointerType !== "mouse") return;
+
+    const surface = event.currentTarget;
+    const rect = surface.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const percentX = x / rect.width - 0.5;
+    const percentY = y / rect.height - 0.5;
+
+    surface.style.transform = `
+      perspective(1100px)
+      translate3d(${percentX * 4}px, ${percentY * 4 - 2}px, 0)
+      rotateX(${-percentY * intensity}deg)
+      rotateY(${percentX * intensity}deg)
+    `;
+    surface.style.setProperty("--cursor-x", `${(x / rect.width) * 100}%`);
+    surface.style.setProperty("--cursor-y", `${(y / rect.height) * 100}%`);
+    surface.style.setProperty("--cursor-opacity", "1");
+  };
+
+  const resetSurface = (event) => {
+    if (prefersReducedMotion) return;
+
+    const surface = event.currentTarget;
+    surface.style.transform = `
+      perspective(1100px)
+      translate3d(0, 0, 0)
+      rotateX(0deg)
+      rotateY(0deg)
+    `;
+    surface.style.setProperty("--cursor-opacity", "0");
+  };
+
   const reveal = {
     hidden: prefersReducedMotion
       ? { opacity: 1, y: 0 }
@@ -189,14 +223,6 @@ const Overview = () => {
                 delay: prefersReducedMotion ? 0 : 0.25 + index * 0.08,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              whileHover={
-                prefersReducedMotion
-                  ? undefined
-                  : {
-                      y: -4,
-                      transition: { duration: 0.2 },
-                    }
-              }
               className={[
                 "group relative min-h-[154px] overflow-hidden rounded-lg border p-5",
                 "transition-[border-color,box-shadow] duration-300",
@@ -204,7 +230,23 @@ const Overview = () => {
                   ? "border-teal-950 bg-teal-950 text-white shadow-[0_14px_36px_rgba(6,78,59,0.12)]"
                   : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-[0_14px_36px_rgba(28,25,23,0.06)]",
               ].join(" ")}
-            >
+              onPointerMove={(event) => handleSurfaceMove(event, 2.2)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+              >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 180px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.38), transparent 72%)",
+                }}
+              />
+
               {!stat.dark && (
                 <div
                   aria-hidden="true"
@@ -288,16 +330,24 @@ const Overview = () => {
             duration: prefersReducedMotion ? 0 : 0.65,
             delay: prefersReducedMotion ? 0 : 0.55,
           }}
-          whileHover={
-            prefersReducedMotion
-              ? undefined
-              : {
-                  y: -3,
-                  transition: { duration: 0.2 },
-                }
-          }
-          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] transition-[box-shadow,border-color] duration-300 hover:border-stone-300 hover:shadow-[0_14px_34px_rgba(28,25,23,0.05)] sm:p-7"
-        >
+          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] transition-[box-shadow,border-color] duration-300 hover:border-stone-300 hover:shadow-[0_14px_34px_rgba(28,25,23,0.05)] sm:p-7 transition-[transform,box-shadow] duration-300 ease-out will-change-transform"
+              onPointerMove={(event) => handleSurfaceMove(event, 2.2)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+              >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 180px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.38), transparent 72%)",
+                }}
+              />
+
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
@@ -424,8 +474,24 @@ const Overview = () => {
             duration: prefersReducedMotion ? 0 : 0.65,
             delay: prefersReducedMotion ? 0 : 0.8,
           }}
-          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-7"
-        >
+          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-7 transition-[transform,box-shadow] duration-300 ease-out will-change-transform"
+              onPointerMove={(event) => handleSurfaceMove(event, 2.2)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+              >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 180px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.38), transparent 72%)",
+                }}
+              />
+
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
@@ -508,8 +574,24 @@ const Overview = () => {
             duration: prefersReducedMotion ? 0 : 0.65,
             delay: prefersReducedMotion ? 0 : 0.9,
           }}
-          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-7"
-        >
+          className="rounded-lg border border-stone-200 bg-white p-6 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-7 transition-[transform,box-shadow] duration-300 ease-out will-change-transform"
+              onPointerMove={(event) => handleSurfaceMove(event, 2.2)}
+              onPointerLeave={resetSurface}
+              style={{
+                "--cursor-x": "50%",
+                "--cursor-y": "50%",
+                "--cursor-opacity": "0",
+              }}
+              >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 opacity-[var(--cursor-opacity)] transition-opacity duration-200"
+                style={{
+                  background:
+                    "radial-gradient(circle 180px at var(--cursor-x) var(--cursor-y), rgba(255,255,255,0.38), transparent 72%)",
+                }}
+              />
+
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
@@ -530,14 +612,6 @@ const Overview = () => {
           </div>
 
           <motion.div
-            whileHover={
-              prefersReducedMotion
-                ? undefined
-                : {
-                    y: -3,
-                    transition: { duration: 0.2 },
-                  }
-            }
             className="mt-6 rounded-md bg-[#f2eee5] p-5 transition-shadow duration-300 hover:shadow-[0_10px_26px_rgba(28,25,23,0.05)]"
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">

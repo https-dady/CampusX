@@ -8,6 +8,7 @@ import {
   LogOut,
   Map,
   MessageCircle,
+  MessageSquareText,
   Sparkles,
   UserRound,
   UsersRound,
@@ -26,6 +27,7 @@ const navigation = [
   { label: "Resume analysis", to: "/resume-analysis", icon: FileSearch },
   { label: "Mock interview", to: "/interview/mock", icon: MessageCircle },
   { label: "Community", to: "/community", icon: UsersRound },
+  { label: "Feedback", to: "/feedback", icon: MessageSquareText },
 ];
 
 const WorkspaceSidebar = ({ mobileOpen = false, onClose }) => {
@@ -69,6 +71,7 @@ const WorkspaceSidebar = ({ mobileOpen = false, onClose }) => {
             <span className="flex size-9 items-center justify-center rounded-md bg-orange-300 text-teal-950 transition-transform duration-200 group-hover:scale-[1.03]">
               <Sparkles size={17} strokeWidth={2} aria-hidden="true" />
             </span>
+
             <span className="text-lg font-bold tracking-[-0.03em]">
               campus<span className="text-orange-300">X</span>
             </span>
@@ -84,12 +87,16 @@ const WorkspaceSidebar = ({ mobileOpen = false, onClose }) => {
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Workspace">
+        <nav
+          className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+          aria-label="Workspace"
+        >
           <ul className="space-y-1">
             {navigation.map(({ label, to, icon: Icon }) => {
               const isActive =
                 location.pathname === to ||
-                (to !== "/dashboard" && location.pathname.startsWith(`${to}/`));
+                (to !== "/dashboard" &&
+                  location.pathname.startsWith(`${to}/`));
 
               return (
                 <li key={to}>
@@ -116,6 +123,7 @@ const WorkspaceSidebar = ({ mobileOpen = false, onClose }) => {
                           : "text-white/60 group-hover:translate-x-0.5 group-hover:text-white/85",
                       ].join(" ")}
                     />
+
                     <span>{label}</span>
                   </NavLink>
                 </li>
@@ -129,20 +137,35 @@ const WorkspaceSidebar = ({ mobileOpen = false, onClose }) => {
             <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#d9eee8] text-sm font-semibold text-teal-950">
               L
             </div>
+
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold text-white">Student</p>
-              <p className="truncate text-[11px] text-white/45">Building your direction</p>
+              <p className="truncate text-[13px] font-semibold text-white">
+                Student
+              </p>
+
+              <p className="truncate text-[11px] text-white/45">
+                Building your direction
+              </p>
             </div>
           </div>
 
           <motion.button
             type="button"
             onClick={handleLogout}
-            whileHover={prefersReducedMotion ? undefined : { x: 2 }}
-            whileTap={prefersReducedMotion ? undefined : { scale: 0.98 }}
+            whileHover={
+              prefersReducedMotion ? undefined : { x: 2 }
+            }
+            whileTap={
+              prefersReducedMotion ? undefined : { scale: 0.98 }
+            }
             className="mt-1 flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-[13px] font-medium text-white/65 transition-colors duration-200 hover:bg-white/[0.07] hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300"
           >
-            <LogOut size={17} strokeWidth={1.7} aria-hidden="true" />
+            <LogOut
+              size={17}
+              strokeWidth={1.7}
+              aria-hidden="true"
+            />
+
             <span>Sign out</span>
           </motion.button>
         </div>
