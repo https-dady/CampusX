@@ -20,12 +20,15 @@ import {
   googleAuth,
 } from "../../services/auth.service";
 import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
+import { useAuth } from "../../context/AuthContext";
+
 
 const pageEase = [0.22, 1, 0.36, 1];
 
 function Login() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { setSession } = useAuth();
 
   const [formData, setFormData] = useState({
     email: location.state?.email || "",
@@ -52,150 +55,136 @@ function Login() {
     setSuccess("");
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+const handleSubmit = async (event) => {
+  event.preventDefault();
 
-    setError("");
-    setSuccess("");
+  setError("");
+  setSuccess("");
 
-    const email = formData.email.trim();
+  const email = formData.email.trim();
 
-    if (!email || !formData.password) {
-      setError(
-        "Please enter your email and password."
+  if (!email || !formData.password) {
+    setError(
+      "Please enter your email and password."
+    );
+    return;
+  }
+
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    setError(
+      "Please enter a valid email address."
+    );
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const result = await login({
+      email,
+      password: formData.password,
+    });
+
+    if (!result?.success) {
+      throw new Error(
+        result?.message ||
+          "Unable to sign in. Please try again."
       );
-      return;
     }
 
-    if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    ) {
-      setError(
-        "Please enter a valid email address."
+    if (!result?.data?.token) {
+      throw new Error(
+        "Login succeeded but no authentication token was received."
       );
-      return;
     }
 
-    try {
-      setIsLoading(true);
+    setSession({
+      token: result.data.token,
+      user: result.data.user,
+    });
 
-      const result = await login({
-        email,
-        password: formData.password,
-      });
+    navigate("/dashboard", {
+      replace: true,
+    });
+  } catch (submitError) {
+    console.error(
+      "Login error:",
+      submitError
+    );
 
-      if (!result?.success) {
-        throw new Error(
-          result?.message ||
-            "Unable to sign in. Please try again."
-        );
-      }
+    const message =
+      submitError?.response?.data?.message ||
+      submitError?.response?.data?.error ||
+      submitError?.message ||
+      "Unable to sign in. Please try again.";
 
-      if (!result?.data?.token) {
-        throw new Error(
-          "Login succeeded but no authentication token was received."
-        );
-      }
+    setError(message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
-      localStorage.setItem(
-        "campusx_token",
-        result.data.token
+const handleGoogleSuccess = async (
+  credentialResponse
+) => {
+  setError("");
+  setSuccess("");
+
+  const credential =
+    credentialResponse?.credential;
+
+  if (!credential) {
+    setError(
+      "Google authentication failed. Please try again."
+    );
+    return;
+  }
+
+  try {
+    setIsLoading(true);
+
+    const result = await googleAuth(credential);
+
+    if (!result?.success) {
+      throw new Error(
+        result?.message ||
+          "Unable to continue with Google."
       );
-
-      if (result.data.user) {
-        localStorage.setItem(
-          "campusx_user",
-          JSON.stringify(result.data.user)
-        );
-      }
-
-      navigate("/dashboard", {
-        replace: true,
-      });
-    } catch (submitError) {
-      console.error(
-        "Login error:",
-        submitError
-      );
-
-      const message =
-        submitError?.response?.data?.message ||
-        submitError?.response?.data?.error ||
-        submitError?.message ||
-        "Unable to sign in. Please try again.";
-
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSuccess = async (
-    credentialResponse
-  ) => {
-    setError("");
-    setSuccess("");
-
-    const credential =
-      credentialResponse?.credential;
-
-    if (!credential) {
-      setError(
-        "Google authentication failed. Please try again."
-      );
-      return;
     }
 
-    try {
-      setIsLoading(true);
-
-      const result = await googleAuth(credential);
-
-      if (!result?.success) {
-        throw new Error(
-          result?.message ||
-            "Unable to continue with Google."
-        );
-      }
-
-      if (!result?.data?.token) {
-        throw new Error(
-          "Google authentication succeeded but no authentication token was received."
-        );
-      }
-
-      localStorage.setItem(
-        "campusx_token",
-        result.data.token
+    if (!result?.data?.token) {
+      throw new Error(
+        "Google authentication succeeded but no authentication token was received."
       );
-
-      if (result.data.user) {
-        localStorage.setItem(
-          "campusx_user",
-          JSON.stringify(result.data.user)
-        );
-      }
-
-      navigate("/dashboard", {
-        replace: true,
-      });
-    } catch (googleError) {
-      console.error(
-        "Google authentication error:",
-        googleError
-      );
-
-      const message =
-        googleError?.response?.data?.message ||
-        googleError?.response?.data?.error ||
-        googleError?.message ||
-        "Unable to continue with Google. Please try again.";
-
-      setError(message);
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    setSession({
+      token: result.data.token,
+      user: result.data.user,
+    });
+
+    navigate("/dashboard", {
+      replace: true,
+    });
+  } catch (googleError) {
+    console.error(
+      "Google authentication error:",
+      googleError
+    );
+
+    const message =
+      googleError?.response?.data?.message ||
+      googleError?.response?.data?.error ||
+      googleError?.message ||
+      "Unable to continue with Google. Please try again.";
+
+    setError(message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleGoogleError = () => {
     setError(
