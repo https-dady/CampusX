@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { motion } from "framer-motion";
-import { signup } from "../../services/auth.service";
-
-
 import {
   ArrowRight,
   CheckCircle2,
@@ -12,35 +13,28 @@ import {
   LockKeyhole,
   Mail,
   ShieldCheck,
-  UserRound,
 } from "lucide-react";
 
+import { login } from "../../services/auth.service";
 
 const pageEase = [0.22, 1, 0.36, 1];
 
-function Signup() {
+function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
+    email: location.state?.email || "",
     password: "",
-    confirmPassword: "",
   });
 
-  const [showPassword, setShowPassword] =
-    useState(false);
-
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
-
-  const [isLoading, setIsLoading] =
-    useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const [error, setError] = useState("");
-
-  const [success, setSuccess] =
-    useState("");
+  const [success, setSuccess] = useState(
+    location.state?.message || ""
+  );
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -55,97 +49,84 @@ function Signup() {
   };
 
   const handleSubmit = async (event) => {
-  event.preventDefault();
+    event.preventDefault();
 
-  setError("");
-  setSuccess("");
+    setError("");
+    setSuccess("");
 
-  const name = formData.name.trim();
-  const email = formData.email.trim();
+    const email = formData.email.trim();
 
-  if (
-    !name ||
-    !email ||
-    !formData.password ||
-    !formData.confirmPassword
-  ) {
-    setError(
-      "Please complete all the required fields."
-    );
-    return;
-  }
+    if (!email || !formData.password) {
+      setError(
+        "Please enter your email and password."
+      );
+      return;
+    }
 
-  if (
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
-    setError(
-      "Please enter a valid email address."
-    );
-    return;
-  }
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      setError(
+        "Please enter a valid email address."
+      );
+      return;
+    }
 
-  if (formData.password.length < 8) {
-    setError(
-      "Password must be at least 8 characters."
-    );
-    return;
-  }
+    try {
+      setIsLoading(true);
 
-  if (
-    formData.password !==
-    formData.confirmPassword
-  ) {
-    setError("Passwords do not match.");
-    return;
-  }
+      const result = await login({
+        email,
+        password: formData.password,
+      });
 
-  try {
-    setIsLoading(true);
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+            "Unable to sign in. Please try again."
+        );
+      }
 
-    const result = await signup({
-      name,
-      email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-    });
+      if (!result?.data?.token) {
+        throw new Error(
+          "Login succeeded but no authentication token was received."
+        );
+      }
 
-    const signupEmail =
-      result?.data?.email ||
-      result?.email ||
-      email;
+      // Auth state / token storage will be wired
+      // separately once the auth context flow is connected.
+      localStorage.setItem(
+        "campusx_token",
+        result.data.token
+      );
 
-    localStorage.setItem(
-      "pending_signup_email",
-      signupEmail
-    );
+      if (result.data.user) {
+        localStorage.setItem(
+          "campusx_user",
+          JSON.stringify(result.data.user)
+        );
+      }
 
-    setSuccess(
-      result?.message ||
-        "Account created. Please verify your email."
-    );
+      navigate("/dashboard", {
+        replace: true,
+      });
+    } catch (submitError) {
+      console.error(
+        "Login error:",
+        submitError
+      );
 
-    navigate("/verify-email", {
-      state: {
-        email: signupEmail,
-      },
-    });
-  } catch (submitError) {
-    console.error(
-      "Signup error:",
-      submitError
-    );
+      const message =
+        submitError?.response?.data?.message ||
+        submitError?.response?.data?.error ||
+        submitError?.message ||
+        "Unable to sign in. Please try again.";
 
-    const message =
-      submitError?.response?.data?.message ||
-      submitError?.response?.data?.error ||
-      submitError?.message ||
-      "Unable to create your account. Please try again.";
-
-    setError(message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <main
@@ -162,7 +143,11 @@ function Signup() {
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden"
+        className="
+          pointer-events-none
+          absolute inset-0
+          overflow-hidden
+        "
       >
         <div
           className="
@@ -188,7 +173,8 @@ function Signup() {
 
         <div
           className="
-            absolute inset-0 opacity-[0.25]
+            absolute inset-0
+            opacity-[0.25]
           "
           style={{
             backgroundImage:
@@ -231,9 +217,9 @@ function Signup() {
         </Link>
 
         <p className="text-sm text-stone-500">
-          Already have an account?{" "}
+          New to CampusX?{" "}
           <Link
-            to="/login"
+            to="/signup"
             className="
               font-semibold
               text-teal-900
@@ -243,7 +229,7 @@ function Signup() {
               focus-visible:outline-teal-800
             "
           >
-            Log In
+            Create account
           </Link>
         </p>
       </header>
@@ -292,7 +278,7 @@ function Signup() {
               ease: pageEase,
             }}
             className="hidden lg:block"
-            aria-labelledby="signup-title"
+            aria-labelledby="login-title"
           >
             <div className="max-w-md">
               <div
@@ -310,17 +296,18 @@ function Signup() {
               >
                 <span
                   className="
-                    size-1.5 rounded-full
+                    size-1.5
+                    rounded-full
                     bg-orange-500
                   "
                   aria-hidden="true"
                 />
 
-                Career clarity, built around you
+                Your journey continues
               </div>
 
               <h1
-                id="signup-title"
+                id="login-title"
                 className="
                   mt-6
                   font-['Newsreader']
@@ -332,9 +319,9 @@ function Signup() {
                   xl:text-6xl
                 "
               >
-                Start building
+                Welcome back,
                 <span className="block text-orange-500">
-                  your direction.
+                  keep moving.
                 </span>
               </h1>
 
@@ -347,17 +334,16 @@ function Signup() {
                   text-stone-500
                 "
               >
-                Create your CampusX account and
-                start turning your skills,
-                interests, and career goals into
-                a clearer next step.
+                Sign in to continue your CampusX
+                journey and pick up your next career
+                step exactly where you left off.
               </p>
 
               <div className="mt-8 space-y-4">
                 {[
-                  "Personalized career direction",
-                  "Skill and learning recommendations",
-                  "Job and interview preparation",
+                  "Continue your personalized roadmap",
+                  "Track your skills and learning progress",
+                  "Prepare for jobs and interviews",
                 ].map((item, index) => (
                   <motion.div
                     key={item}
@@ -406,7 +392,7 @@ function Signup() {
           </motion.section>
 
           {/* ================================================== */}
-          {/* SIGNUP CARD                                        */}
+          {/* LOGIN CARD                                         */}
           {/* ================================================== */}
 
           <motion.section
@@ -443,7 +429,7 @@ function Signup() {
                   text-teal-950
                 "
               >
-                Create your account
+                Welcome back
               </p>
 
               <h2
@@ -457,7 +443,10 @@ function Signup() {
                   text-[#10231f]
                 "
               >
-                Your next step starts here.
+                Continue your
+                <span className="block">
+                  CampusX journey.
+                </span>
               </h2>
 
               <p
@@ -467,14 +456,12 @@ function Signup() {
                   text-stone-500
                 "
               >
-                Create your account to begin
-                your CampusX journey.
+                Sign in to continue your career
+                roadmap and take your next step.
               </p>
             </div>
 
-            {/* ================================================= */}
-            {/* ERROR / SUCCESS                                   */}
-            {/* ================================================= */}
+            {/* ERROR */}
 
             {error && (
               <motion.div
@@ -502,6 +489,8 @@ function Signup() {
               </motion.div>
             )}
 
+            {/* SUCCESS */}
+
             {success && (
               <motion.div
                 initial={{
@@ -528,77 +517,32 @@ function Signup() {
               </motion.div>
             )}
 
-            {/* ================================================= */}
-            {/* FORM                                              */}
-            {/* ================================================= */}
+            {/* FORM */}
 
             <form
               onSubmit={handleSubmit}
               className="mt-7 space-y-5"
               noValidate
             >
-              {/* NAME */}
-
-              <div>
-                <label
-                  htmlFor="signup-name"
-                  className="
-                    mb-2 block
-                    text-xs font-semibold
-                    text-stone-600
-                  "
-                >
-                  Full name
-                </label>
-
-                <div className="relative">
-                  <UserRound
-                    size={17}
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                    className="
-                      pointer-events-none
-                      absolute left-3.5
-                      top-1/2
-                      -translate-y-1/2
-                      text-stone-400
-                    "
-                  />
-
-                  <input
-                    id="signup-name"
-                    name="name"
-                    type="text"
-                    autoComplete="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    className="
-                      min-h-12 w-full
-                      rounded-md
-                      border border-stone-200
-                      bg-stone-50
-                      pl-11 pr-3
-                      text-sm
-                      text-stone-700
-                      outline-none
-                      transition-[border-color,background-color,box-shadow]
-                      duration-200
-                      placeholder:text-stone-400
-                      focus:border-teal-800/40
-                      focus:bg-white
-                      focus:ring-4
-                      focus:ring-teal-800/5
-                    "
-                  />
-                </div>
-              </div>
-
               {/* EMAIL */}
 
-              <div>
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.18,
+                  ease: pageEase,
+                }}
+              >
                 <label
-                  htmlFor="signup-email"
+                  htmlFor="login-email"
                   className="
                     mb-2 block
                     text-xs font-semibold
@@ -623,7 +567,7 @@ function Signup() {
                   />
 
                   <input
-                    id="signup-email"
+                    id="login-email"
                     name="email"
                     type="email"
                     autoComplete="email"
@@ -649,21 +593,50 @@ function Signup() {
                     "
                   />
                 </div>
-              </div>
+              </motion.div>
 
               {/* PASSWORD */}
 
-              <div>
-                <label
-                  htmlFor="signup-password"
-                  className="
-                    mb-2 block
-                    text-xs font-semibold
-                    text-stone-600
-                  "
-                >
-                  Create password
-                </label>
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                transition={{
+                  duration: 0.45,
+                  delay: 0.25,
+                  ease: pageEase,
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between gap-4">
+                  <label
+                    htmlFor="login-password"
+                    className="
+                      block
+                      text-xs font-semibold
+                      text-stone-600
+                    "
+                  >
+                    Password
+                  </label>
+
+                  <Link
+                    to="/forgot-password"
+                    className="
+                      text-xs
+                      font-semibold
+                      text-teal-900
+                      transition-colors
+                      hover:text-teal-700
+                    "
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
 
                 <div className="relative">
                   <LockKeyhole
@@ -680,17 +653,17 @@ function Signup() {
                   />
 
                   <input
-                    id="signup-password"
+                    id="login-password"
                     name="password"
                     type={
                       showPassword
                         ? "text"
                         : "password"
                     }
-                    autoComplete="new-password"
+                    autoComplete="current-password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Create a password"
+                    placeholder="Enter your password"
                     className="
                       min-h-12 w-full
                       rounded-md
@@ -748,118 +721,7 @@ function Signup() {
                     )}
                   </button>
                 </div>
-
-                <p
-                  className="
-                    mt-1.5
-                    text-[11px]
-                    text-stone-400
-                  "
-                >
-                  Minimum 8 characters.
-                </p>
-              </div>
-
-              {/* CONFIRM PASSWORD */}
-
-              <div>
-                <label
-                  htmlFor="signup-confirm-password"
-                  className="
-                    mb-2 block
-                    text-xs font-semibold
-                    text-stone-600
-                  "
-                >
-                  Confirm password
-                </label>
-
-                <div className="relative">
-                  <LockKeyhole
-                    size={17}
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                    className="
-                      pointer-events-none
-                      absolute left-3.5
-                      top-1/2
-                      -translate-y-1/2
-                      text-stone-400
-                    "
-                  />
-
-                  <input
-                    id="signup-confirm-password"
-                    name="confirmPassword"
-                    type={
-                      showConfirmPassword
-                        ? "text"
-                        : "password"
-                    }
-                    autoComplete="new-password"
-                    value={
-                      formData.confirmPassword
-                    }
-                    onChange={handleChange}
-                    placeholder="Confirm your password"
-                    className="
-                      min-h-12 w-full
-                      rounded-md
-                      border border-stone-200
-                      bg-stone-50
-                      pl-11 pr-11
-                      text-sm
-                      text-stone-700
-                      outline-none
-                      transition-[border-color,background-color,box-shadow]
-                      duration-200
-                      placeholder:text-stone-400
-                      focus:border-teal-800/40
-                      focus:bg-white
-                      focus:ring-4
-                      focus:ring-teal-800/5
-                    "
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(
-                        (value) => !value
-                      )
-                    }
-                    aria-label={
-                      showConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
-                    className="
-                      absolute right-3
-                      top-1/2
-                      -translate-y-1/2
-                      rounded p-1
-                      text-stone-400
-                      transition-colors
-                      hover:text-teal-900
-                      focus-visible:outline-2
-                      focus-visible:outline-offset-2
-                      focus-visible:outline-teal-800
-                    "
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff
-                        size={17}
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <Eye
-                        size={17}
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                </div>
-              </div>
+              </motion.div>
 
               {/* SUBMIT */}
 
@@ -902,8 +764,8 @@ function Signup() {
                 "
               >
                 {isLoading
-                  ? "Creating account..."
-                  : "Create account"}
+                  ? "Signing in..."
+                  : "Sign in"}
 
                 {!isLoading && (
                   <ArrowRight
@@ -915,9 +777,7 @@ function Signup() {
               </motion.button>
             </form>
 
-            {/* ================================================= */}
-            {/* TRUST                                             */}
-            {/* ================================================= */}
+            {/* TRUST */}
 
             <div
               className="
@@ -941,10 +801,41 @@ function Signup() {
               />
 
               <span>
-                Your account will be verified
-                through email before you continue.
+                Your CampusX account keeps your
+                career progress connected in one place.
               </span>
             </div>
+
+            {/* SIGNUP */}
+
+            <motion.div
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              transition={{
+                duration: 0.45,
+                delay: 0.5,
+              }}
+              className="mt-5 text-center"
+            >
+              <p className="text-xs text-stone-500">
+                Don't have an account?{" "}
+                <Link
+                  to="/signup"
+                  className="
+                    font-semibold
+                    text-teal-900
+                    transition-colors
+                    hover:text-orange-500
+                  "
+                >
+                  Create your account
+                </Link>
+              </p>
+            </motion.div>
           </motion.section>
         </div>
       </div>
@@ -952,4 +843,4 @@ function Signup() {
   );
 }
 
-export default Signup;
+export default Login;

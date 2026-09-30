@@ -28,6 +28,12 @@ import Community from "../pages/community/Community.jsx";
 import Feedback from "../pages/feedback/Feedback.jsx";
 import Jobs from "../pages/jobs/Jobs.jsx";
 
+
+import Login from "../pages/auth/Login.jsx";
+import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
+import VerifyEmail from "../pages/auth/VerifyEmail.jsx";
+
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -160,6 +166,20 @@ const AppRoutes = () => {
     </WorkspaceLayout>
   }
 />
+
+
+
+<Route path="/login" element={<Login />} />
+<Route
+  path="/forgot-password"
+  element={<ForgotPassword />}
+/>
+
+<Route
+  path="/verify-email"
+  element={<VerifyEmail />}
+/>
+
 
       </Routes>
     </BrowserRouter>

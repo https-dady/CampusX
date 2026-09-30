@@ -4,7 +4,10 @@ export const signupSchema = z.object({
   name: z
     .string()
     .trim()
-    .min(2, "Name must be at least 2 characters")
+    .min(
+      2,
+      "Name must be at least 2 characters"
+    )
     .max(100, "Name is too long"),
 
   email: z
@@ -15,7 +18,10 @@ export const signupSchema = z.object({
 
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
+    .min(
+      8,
+      "Password must be at least 8 characters"
+    )
     .max(128, "Password is too long"),
 });
 
@@ -49,7 +55,10 @@ export const verifyOtpSchema = z.object({
 export const googleAuthSchema = z.object({
   credential: z
     .string()
-    .min(1, "Google credential is required"),
+    .min(
+      1,
+      "Google credential is required"
+    ),
 });
 
 export const forgotPasswordSchema = z.object({
@@ -75,35 +84,32 @@ export const verifyResetOtpSchema = z.object({
     ),
 });
 
-export const resetPasswordSchema = z
-  .object({
-    resetToken: z
-      .string()
-      .min(
-        1,
-        "Reset token is required"
-      ),
+/*
+ * Password reset happens AFTER reset OTP
+ * verification.
+ *
+ * verifyResetOtp service generates a temporary
+ * resetToken. The final reset endpoint therefore
+ * expects:
+ *
+ * {
+ *   resetToken,
+ *   newPassword
+ * }
+ */
+export const resetPasswordSchema = z.object({
+  resetToken: z
+    .string()
+    .min(
+      1,
+      "Reset token is required"
+    ),
 
-    newPassword: z
-      .string()
-      .min(
-        8,
-        "Password must be at least 8 characters"
-      )
-      .max(128, "Password is too long"),
-
-    confirmPassword: z
-      .string()
-      .min(
-        1,
-        "Please confirm your password"
-      ),
-  })
-  .refine(
-    (data) =>
-      data.newPassword === data.confirmPassword,
-    {
-      message: "Passwords do not match",
-      path: ["confirmPassword"],
-    }
-  );
+  newPassword: z
+    .string()
+    .min(
+      8,
+      "Password must be at least 8 characters"
+    )
+    .max(128, "Password is too long"),
+});

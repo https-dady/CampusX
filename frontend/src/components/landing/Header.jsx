@@ -179,7 +179,7 @@ const Header = () => {
             className="hidden items-center gap-6 lg:flex"
           >
             <a
-              href="/login"
+              href="/signup"
               className="rounded-sm py-2 text-xs font-medium text-white/75 transition-colors duration-200 hover:text-orange-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-300 xl:text-[13px]"
             >
               Sign in
@@ -308,16 +308,16 @@ const Header = () => {
 
           <div className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center">
             <a
-              href="/login"
+              href="/signup"
               onClick={closeMenu}
               tabIndex={isMenuOpen ? 0 : -1}
               className="inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-medium text-white/80 transition-colors duration-200 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300"
             >
-              Sign in
+              Sign Up
             </a>
 
             <a
-              href="/signup"
+              href="/login"
               onClick={closeMenu}
               tabIndex={isMenuOpen ? 0 : -1}
               className="group inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-orange-300 px-4 text-sm font-semibold text-teal-950 transition-all duration-200 hover:bg-orange-200 hover:shadow-[0_8px_24px_rgba(251,191,36,0.18)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-300"
