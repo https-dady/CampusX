@@ -31,6 +31,28 @@ export const login = async (payload) => {
 };
 
 /**
+ * Authenticate user with Google.
+ *
+ * Backend:
+ * POST /api/auth/google
+ *
+ * Backend expects:
+ * {
+ *   credential: string
+ * }
+ */
+export const googleAuth = async (credential) => {
+  const response = await api.post(
+    "/auth/google",
+    {
+      credential,
+    }
+  );
+
+  return response.data;
+};
+
+/**
  * Verify signup email using OTP.
  *
  * Backend:

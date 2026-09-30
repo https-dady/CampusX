@@ -1,8 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { signup } from "../../services/auth.service";
 
+import {
+  signup,
+  googleAuth,
+} from "../../services/auth.service";
+
+import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
 
 import {
   ArrowRight,
@@ -14,7 +19,6 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-
 
 const pageEase = [0.22, 1, 0.36, 1];
 
@@ -55,97 +59,171 @@ function Signup() {
   };
 
   const handleSubmit = async (event) => {
-  event.preventDefault();
+    event.preventDefault();
 
-  setError("");
-  setSuccess("");
+    setError("");
+    setSuccess("");
 
-  const name = formData.name.trim();
-  const email = formData.email.trim();
+    const name = formData.name.trim();
+    const email = formData.email.trim();
 
-  if (
-    !name ||
-    !email ||
-    !formData.password ||
-    !formData.confirmPassword
-  ) {
+    if (
+      !name ||
+      !email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
+      setError(
+        "Please complete all the required fields."
+      );
+      return;
+    }
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    ) {
+      setError(
+        "Please enter a valid email address."
+      );
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError(
+        "Password must be at least 8 characters."
+      );
+      return;
+    }
+
+    if (
+      formData.password !==
+      formData.confirmPassword
+    ) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const result = await signup({
+        name,
+        email,
+        password: formData.password,
+      });
+
+      const signupEmail =
+        result?.data?.email ||
+        result?.email ||
+        email;
+
+      localStorage.setItem(
+        "pending_signup_email",
+        signupEmail
+      );
+
+      setSuccess(
+        result?.message ||
+          "Account created. Please verify your email."
+      );
+
+      navigate("/verify-email", {
+        state: {
+          email: signupEmail,
+        },
+      });
+    } catch (submitError) {
+      console.error(
+        "Signup error:",
+        submitError
+      );
+
+      const message =
+        submitError?.response?.data?.message ||
+        submitError?.response?.data?.error ||
+        submitError?.message ||
+        "Unable to create your account. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (
+    credentialResponse
+  ) => {
+    setError("");
+    setSuccess("");
+
+    const credential =
+      credentialResponse?.credential;
+
+    if (!credential) {
+      setError(
+        "Google authentication did not return a credential."
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const result = await googleAuth(
+        credential
+      );
+
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+            "Unable to continue with Google. Please try again."
+        );
+      }
+
+      if (!result?.data?.token) {
+        throw new Error(
+          "Google authentication succeeded but no authentication token was received."
+        );
+      }
+
+      localStorage.setItem(
+        "campusx_token",
+        result.data.token
+      );
+
+      if (result.data.user) {
+        localStorage.setItem(
+          "campusx_user",
+          JSON.stringify(result.data.user)
+        );
+      }
+
+      navigate("/dashboard", {
+        replace: true,
+      });
+    } catch (googleError) {
+      console.error(
+        "Google signup error:",
+        googleError
+      );
+
+      const message =
+        googleError?.response?.data?.message ||
+        googleError?.response?.data?.error ||
+        googleError?.message ||
+        "Unable to continue with Google. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
     setError(
-      "Please complete all the required fields."
+      "Google authentication was cancelled or failed. Please try again."
     );
-    return;
-  }
-
-  if (
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
-    setError(
-      "Please enter a valid email address."
-    );
-    return;
-  }
-
-  if (formData.password.length < 8) {
-    setError(
-      "Password must be at least 8 characters."
-    );
-    return;
-  }
-
-  if (
-    formData.password !==
-    formData.confirmPassword
-  ) {
-    setError("Passwords do not match.");
-    return;
-  }
-
-  try {
-    setIsLoading(true);
-
-    const result = await signup({
-      name,
-      email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-    });
-
-    const signupEmail =
-      result?.data?.email ||
-      result?.email ||
-      email;
-
-    localStorage.setItem(
-      "pending_signup_email",
-      signupEmail
-    );
-
-    setSuccess(
-      result?.message ||
-        "Account created. Please verify your email."
-    );
-
-    navigate("/verify-email", {
-      state: {
-        email: signupEmail,
-      },
-    });
-  } catch (submitError) {
-    console.error(
-      "Signup error:",
-      submitError
-    );
-
-    const message =
-      submitError?.response?.data?.message ||
-      submitError?.response?.data?.error ||
-      submitError?.message ||
-      "Unable to create your account. Please try again.";
-
-    setError(message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   return (
     <main
@@ -914,6 +992,37 @@ function Signup() {
                 )}
               </motion.button>
             </form>
+
+            {/* ================================================= */}
+            {/* GOOGLE AUTH                                      */}
+            {/* ================================================= */}
+
+            <div className="mt-6">
+              <div className="relative flex items-center">
+                <div className="h-px flex-1 bg-stone-200" />
+
+                <span
+                  className="
+                    px-3
+                    text-[11px]
+                    font-medium
+                    text-stone-400
+                  "
+                >
+                  OR
+                </span>
+
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+
+              <div className="mt-5">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
             {/* ================================================= */}
             {/* TRUST                                             */}

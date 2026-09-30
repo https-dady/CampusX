@@ -15,7 +15,11 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { login } from "../../services/auth.service";
+import {
+  login,
+  googleAuth,
+} from "../../services/auth.service";
+import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
 
 const pageEase = [0.22, 1, 0.36, 1];
 
@@ -93,8 +97,6 @@ function Login() {
         );
       }
 
-      // Auth state / token storage will be wired
-      // separately once the auth context flow is connected.
       localStorage.setItem(
         "campusx_token",
         result.data.token
@@ -126,6 +128,79 @@ function Login() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleSuccess = async (
+    credentialResponse
+  ) => {
+    setError("");
+    setSuccess("");
+
+    const credential =
+      credentialResponse?.credential;
+
+    if (!credential) {
+      setError(
+        "Google authentication failed. Please try again."
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const result = await googleAuth(credential);
+
+      if (!result?.success) {
+        throw new Error(
+          result?.message ||
+            "Unable to continue with Google."
+        );
+      }
+
+      if (!result?.data?.token) {
+        throw new Error(
+          "Google authentication succeeded but no authentication token was received."
+        );
+      }
+
+      localStorage.setItem(
+        "campusx_token",
+        result.data.token
+      );
+
+      if (result.data.user) {
+        localStorage.setItem(
+          "campusx_user",
+          JSON.stringify(result.data.user)
+        );
+      }
+
+      navigate("/dashboard", {
+        replace: true,
+      });
+    } catch (googleError) {
+      console.error(
+        "Google authentication error:",
+        googleError
+      );
+
+      const message =
+        googleError?.response?.data?.message ||
+        googleError?.response?.data?.error ||
+        googleError?.message ||
+        "Unable to continue with Google. Please try again.";
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError(
+      "Google authentication was cancelled or failed. Please try again."
+    );
   };
 
   return (
@@ -776,6 +851,28 @@ function Login() {
                 )}
               </motion.button>
             </form>
+
+            {/* GOOGLE AUTH */}
+
+            <div className="mt-6">
+              <div className="relative flex items-center">
+                <div className="h-px flex-1 bg-stone-200" />
+
+                <span className="px-3 text-[11px] font-medium text-stone-400">
+                  OR
+                </span>
+
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+
+              <div className="mt-5">
+                <GoogleAuthButton
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
 
             {/* TRUST */}
 

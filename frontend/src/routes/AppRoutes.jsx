@@ -5,7 +5,7 @@ import {
 } from "react-router-dom";
 
 import LandingPage from "../pages/LandingPage.jsx";
-import GoogleTest from "../pages/auth/GoogleTest.jsx";
+// import GoogleTest from "../pages/auth/GoogleTest.jsx";
 import Signup from "../pages/auth/Signup.jsx";
 import VoiceInterviewTest from "../pages/interview/VoiceInterviewTest.jsx";
 import GeminiLiveInterviewTest from "../pages/interview/GeminiLiveInterviewTest.jsx";
@@ -42,7 +42,7 @@ const AppRoutes = () => {
 
         <Route path="/signup" element={<Signup />} />
 
-        <Route path="/google-test" element={<GoogleTest />} />
+        {/* <Route path="/google-test" element={<GoogleTest />} /> */}
 
         <Route
           path="/interview/voice-test"
