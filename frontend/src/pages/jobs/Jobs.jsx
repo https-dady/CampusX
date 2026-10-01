@@ -15,15 +15,16 @@ import {
   X,
 } from "lucide-react";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000/api";
+import {
+  getJobCache,
+  searchJobs,
+} from "../../services/jobs.service";
 
 const pageEase = [0.22, 1, 0.36, 1];
 
-/* ========================================================================== */
-/* CURSOR CARD                                                               */
-/* ========================================================================== */
+/* ==========================================================================
+   CURSOR CARD
+   ========================================================================== */
 
 const CursorCard = ({
   children,
@@ -76,7 +77,9 @@ const CursorCard = ({
   };
 
   const resetCard = (event) => {
-    if (prefersReducedMotion) return;
+    if (prefersReducedMotion) {
+      return;
+    }
 
     const card = event.currentTarget;
 
@@ -143,28 +146,14 @@ const CursorCard = ({
   );
 };
 
-/* ========================================================================== */
-/* HELPERS                                                                    */
-/* ========================================================================== */
+/* ==========================================================================
+   HELPERS
+   ========================================================================== */
 
 const getJobsFromResponse = (data) => {
-  if (Array.isArray(data?.jobs)) {
-    return data.jobs;
-  }
-
-  if (Array.isArray(data?.data?.jobs)) {
-    return data.data.jobs;
-  }
-
-  if (Array.isArray(data?.results)) {
-    return data.results;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  return [];
+  return Array.isArray(data?.data?.jobs)
+    ? data.data.jobs
+    : [];
 };
 
 const getJobValue = (job, keys) => {
@@ -204,9 +193,51 @@ const getSkills = (job) => {
   return [];
 };
 
-/* ========================================================================== */
-/* JOB CARD                                                                   */
-/* ========================================================================== */
+const getJobIdentifier = (job) => {
+  const url = getJobValue(job, [
+    "url",
+    "applyUrl",
+    "applicationUrl",
+    "link",
+  ]);
+
+  if (url) {
+    return String(url);
+  }
+
+  const id = getJobValue(job, [
+    "id",
+    "_id",
+  ]);
+
+  if (id) {
+    return String(id);
+  }
+
+  return [
+    getJobValue(job, [
+      "title",
+      "jobTitle",
+      "role",
+      "position",
+    ]),
+    getJobValue(job, [
+      "company",
+      "companyName",
+      "employer",
+    ]),
+    getJobValue(job, [
+      "location",
+      "jobLocation",
+    ]),
+  ]
+    .filter(Boolean)
+    .join("|");
+};
+
+/* ==========================================================================
+   JOB CARD
+   ========================================================================== */
 
 const JobCard = ({
   job,
@@ -234,34 +265,52 @@ const JobCard = ({
       "jobLocation",
     ]) || "Location unavailable";
 
-  const experience =
-    getJobValue(job, [
-      "experience",
-      "experienceLevel",
-      "experienceRequired",
-    ]);
+  const experience = getJobValue(job, [
+    "experience",
+    "experienceLevel",
+    "experienceRequired",
+  ]);
 
-  const applyUrl =
-    getJobValue(job, [
-      "applyUrl",
-      "applicationUrl",
-      "url",
-      "link",
-    ]);
+  const employmentType = getJobValue(job, [
+    "employmentType",
+    "jobType",
+    "type",
+  ]);
 
-  const match =
+  const description =
     getJobValue(job, [
-      "match",
-      "matchScore",
-      "fitScore",
-    ]);
+      "description",
+      "summary",
+    ]) || "No job description available.";
+
+  const applyUrl = getJobValue(job, [
+    "applyUrl",
+    "applicationUrl",
+    "url",
+    "link",
+  ]);
+
+  const match = getJobValue(job, [
+    "match",
+    "matchScore",
+    "fitScore",
+  ]);
+
+  const remote = getJobValue(job, [
+    "remote",
+    "isRemote",
+  ]);
 
   const skills = getSkills(job);
 
   return (
     <CursorCard
       intensity={2}
-      delay={prefersReducedMotion ? 0 : 0.12 + index * 0.07}
+      delay={
+        prefersReducedMotion
+          ? 0
+          : 0.12 + index * 0.07
+      }
       className="
         rounded-lg
         border border-stone-200
@@ -319,6 +368,7 @@ const JobCard = ({
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
+
                   {company}
                 </span>
 
@@ -332,6 +382,7 @@ const JobCard = ({
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
+
                   {location}
                 </span>
               </div>
@@ -368,7 +419,8 @@ const JobCard = ({
         {/* META */}
 
         {(experience ||
-          getJobValue(job, ["remote", "isRemote"])) && (
+          employmentType ||
+          remote) && (
           <div className="flex flex-wrap gap-2">
             {experience && (
               <span
@@ -392,12 +444,23 @@ const JobCard = ({
               </span>
             )}
 
-            {Boolean(
-              getJobValue(job, [
-                "remote",
-                "isRemote",
-              ])
-            ) && (
+            {employmentType && (
+              <span
+                className="
+                  inline-flex items-center
+                  gap-1.5 rounded-md
+                  border border-stone-200
+                  bg-stone-50
+                  px-2.5 py-1.5
+                  text-xs font-medium
+                  text-stone-600
+                "
+              >
+                {String(employmentType)}
+              </span>
+            )}
+
+            {Boolean(remote) && (
               <span
                 className="
                   inline-flex items-center
@@ -421,6 +484,18 @@ const JobCard = ({
           </div>
         )}
 
+        {/* DESCRIPTION */}
+
+        <p
+          className="
+            line-clamp-3
+            text-sm leading-6
+            text-stone-500
+          "
+        >
+          {description}
+        </p>
+
         {/* SKILLS */}
 
         {skills.length > 0 && (
@@ -433,12 +508,12 @@ const JobCard = ({
                     ? false
                     : {
                         opacity: 0,
-                        scale: 0.94,
+                        y: 4,
                       }
                 }
                 animate={{
                   opacity: 1,
-                  scale: 1,
+                  y: 0,
                 }}
                 transition={{
                   duration: prefersReducedMotion
@@ -446,7 +521,8 @@ const JobCard = ({
                     : 0.3,
                   delay: prefersReducedMotion
                     ? 0
-                    : 0.25 + index * 0.07,
+                    : 0.25 +
+                      skillIndex * 0.07,
                 }}
                 className="
                   inline-flex items-center
@@ -546,9 +622,9 @@ const JobCard = ({
   );
 };
 
-/* ========================================================================== */
-/* MAIN PAGE                                                                  */
-/* ========================================================================== */
+/* ==========================================================================
+   MAIN PAGE
+   ========================================================================== */
 
 const Jobs = () => {
   const prefersReducedMotion = useReducedMotion();
@@ -556,12 +632,17 @@ const Jobs = () => {
   const [role, setRole] = useState("");
   const [location, setLocation] = useState("");
   const [experience, setExperience] = useState("");
-  const [remote, setRemote] = useState(false);
-
-  const [activeTab, setActiveTab] =
-    useState("recommended");
+  const [employmentType, setEmploymentType] =
+    useState("");
 
   const [jobs, setJobs] = useState([]);
+
+  const [cacheKey, setCacheKey] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] =
+    useState(false);
+  const [loadMoreError, setLoadMoreError] =
+    useState("");
 
   const [isSearching, setIsSearching] =
     useState(false);
@@ -571,77 +652,76 @@ const Jobs = () => {
 
   const [error, setError] = useState("");
 
+  /* ------------------------------------------------------------------------
+     SEARCH
+     ------------------------------------------------------------------------ */
+
   const handleSearch = async (event) => {
     event.preventDefault();
 
     setError("");
+    setLoadMoreError("");
     setHasSearched(true);
 
     if (!role.trim()) {
       setError(
         "Please enter the role or area you want to search for."
       );
+
       setJobs([]);
+      setCacheKey("");
+      setHasMore(false);
+
       return;
     }
 
     try {
       setIsSearching(true);
 
-      const token =
-        localStorage.getItem("token");
+      const response = await searchJobs({
+        targetRole: role,
+        location,
+        experienceLevel: experience,
+        employmentType,
+      });
 
-      const response = await fetch(
-        `${API_BASE_URL}/jobs/search`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token
-              ? {
-                  Authorization:
-                    `Bearer ${token}`,
-                }
-              : {}),
-          },
-          body: JSON.stringify({
-            role: role.trim(),
-            location: location.trim(),
-            experience: experience.trim(),
-            remote,
-          }),
-        }
-      );
-
-      let data = null;
-
-      try {
-        data = await response.json();
-      } catch {
-        data = null;
-      }
-
-      if (!response.ok) {
+      if (!response?.success) {
         throw new Error(
-          data?.message ||
+          response?.message ||
             "Unable to search for jobs right now."
         );
       }
 
       const nextJobs =
-        getJobsFromResponse(data);
+        getJobsFromResponse(response);
 
       setJobs(nextJobs);
+
+      const nextCacheKey =
+        typeof response?.data?.cacheKey ===
+        "string"
+          ? response.data.cacheKey
+          : "";
+
+      setCacheKey(nextCacheKey);
+
+      setHasMore(
+        response?.data?.hasMore === true &&
+          nextCacheKey.length > 0
+      );
     } catch (searchError) {
       console.error(
-        "Job search error:",
+        "CampusX job search error:",
         searchError
       );
 
       setJobs([]);
+      setCacheKey("");
+      setHasMore(false);
 
       setError(
-        searchError?.message ||
+        searchError?.response?.data?.message ||
+          searchError?.message ||
           "Unable to search for jobs right now."
       );
     } finally {
@@ -649,14 +729,112 @@ const Jobs = () => {
     }
   };
 
+  /* ------------------------------------------------------------------------
+     CLEAR
+     ------------------------------------------------------------------------ */
+
   const handleClearFilters = () => {
     setRole("");
     setLocation("");
     setExperience("");
-    setRemote(false);
+    setEmploymentType("");
+
     setJobs([]);
+
+    setCacheKey("");
+    setHasMore(false);
+    setIsLoadingMore(false);
+    setLoadMoreError("");
+
     setError("");
     setHasSearched(false);
+  };
+
+  /* ------------------------------------------------------------------------
+     LOAD MORE FROM JOB CACHE
+     ------------------------------------------------------------------------ */
+
+  const handleLoadMore = async () => {
+    if (
+      !cacheKey ||
+      !hasMore ||
+      isLoadingMore
+    ) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    setLoadMoreError("");
+
+    try {
+      const cacheResponse =
+        await getJobCache(cacheKey);
+
+      if (!cacheResponse?.success) {
+        throw new Error(
+          cacheResponse?.message ||
+            "Unable to load more jobs."
+        );
+      }
+
+      const cachedJobs =
+        Array.isArray(
+          cacheResponse?.data?.jobs
+        )
+          ? cacheResponse.data.jobs
+          : [];
+
+      if (cachedJobs.length > 0) {
+        setJobs((currentJobs) => {
+          const mergedJobs = [
+            ...currentJobs,
+            ...cachedJobs,
+          ];
+
+          const uniqueJobs = [];
+          const seen = new Set();
+
+          for (const job of mergedJobs) {
+            const identifier =
+              getJobIdentifier(job);
+
+            if (
+              !identifier ||
+              seen.has(identifier)
+            ) {
+              continue;
+            }
+
+            seen.add(identifier);
+            uniqueJobs.push(job);
+          }
+
+          return uniqueJobs;
+        });
+      }
+
+      /*
+       * Current backend cache endpoint returns
+       * the complete cached job list.
+       *
+       * Therefore there is no second cache
+       * page to request after this call.
+       */
+      setHasMore(false);
+    } catch (loadError) {
+      console.error(
+        "CampusX job cache load error:",
+        loadError
+      );
+
+      setLoadMoreError(
+        loadError?.response?.data?.message ||
+          loadError?.message ||
+          "Unable to load more jobs."
+      );
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   return (
@@ -668,9 +846,9 @@ const Jobs = () => {
         lg:px-8 lg:py-10
       "
     >
-      {/* ================================================================== */}
-      {/* HEADER                                                              */}
-      {/* ================================================================== */}
+      {/* ====================================================================
+          HEADER
+          ==================================================================== */}
 
       <motion.section
         initial={
@@ -690,31 +868,32 @@ const Jobs = () => {
         }}
         aria-labelledby="jobs-title"
       >
-        <p
-          className="
-            text-[10px] font-bold
-            uppercase tracking-[0.12em]
-            text-teal-950
-          "
-        >
-          Jobs & opportunities
-        </p>
-
         <div
           className="
-            mt-2 flex flex-col
-            justify-between gap-5
-            sm:flex-row sm:items-end
+            flex flex-col gap-5
+            sm:flex-row
+            sm:items-end
+            sm:justify-between
           "
         >
           <div>
+            <p
+              className="
+                text-[10px] font-bold
+                uppercase tracking-[0.12em]
+                text-teal-950
+              "
+            >
+              I Want a Job
+            </p>
+
             <motion.h1
               initial={
                 prefersReducedMotion
                   ? false
                   : {
                       opacity: 0,
-                      y: 14,
+                      y: 12,
                     }
               }
               animate={{
@@ -734,6 +913,7 @@ const Jobs = () => {
               }}
               id="jobs-title"
               className="
+                mt-2
                 font-['Newsreader']
                 text-4xl font-semibold
                 leading-[1.02]
@@ -829,9 +1009,9 @@ const Jobs = () => {
         </div>
       </motion.section>
 
-      {/* ================================================================== */}
-      {/* SEARCH PANEL                                                        */}
-      {/* ================================================================== */}
+      {/* ====================================================================
+          SEARCH PANEL
+          ==================================================================== */}
 
       <div className="mt-8">
         <CursorCard
@@ -895,7 +1075,7 @@ const Jobs = () => {
               className="
                 mt-6 grid gap-4
                 md:grid-cols-2
-                xl:grid-cols-[1.4fr_1fr_1fr_auto]
+                xl:grid-cols-[1.4fr_1fr_1fr_1fr]
               "
             >
               {/* ROLE */}
@@ -1049,55 +1229,46 @@ const Jobs = () => {
                 />
               </label>
 
-              {/* REMOTE */}
+              {/* EMPLOYMENT TYPE */}
 
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setRemote(
-                      (value) => !value
+              <label className="block">
+                <span
+                  className="
+                    mb-2 block
+                    text-xs font-semibold
+                    text-stone-600
+                  "
+                >
+                  Employment type
+                </span>
+
+                <input
+                  type="text"
+                  value={employmentType}
+                  onChange={(event) =>
+                    setEmploymentType(
+                      event.target.value
                     )
                   }
-                  aria-pressed={remote}
-                  className={[
-                    `
-                      flex min-h-11 w-full
-                      items-center justify-center
-                      gap-2 rounded-md
-                      border px-4
-                      text-sm font-semibold
-                      transition-[background-color,border-color,color,box-shadow]
-                      duration-200
-                      focus-visible:outline-2
-                      focus-visible:outline-offset-2
-                      focus-visible:outline-teal-800
-                      md:w-auto
-                    `,
-                    remote
-                      ? `
-                        border-teal-950
-                        bg-teal-950
-                        text-white
-                      `
-                      : `
-                        border-stone-200
-                        bg-stone-50
-                        text-stone-600
-                        hover:border-teal-800/25
-                        hover:text-teal-950
-                      `,
-                  ].join(" ")}
-                >
-                  <Wifi
-                    size={15}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                  />
-
-                  Remote
-                </button>
-              </div>
+                  placeholder="e.g. Full-time"
+                  className="
+                    min-h-11 w-full
+                    rounded-md
+                    border border-stone-200
+                    bg-stone-50
+                    px-3
+                    text-sm text-stone-700
+                    outline-none
+                    transition-[border-color,box-shadow,background-color]
+                    duration-200
+                    placeholder:text-stone-400
+                    focus:border-teal-800/40
+                    focus:bg-white
+                    focus:ring-4
+                    focus:ring-teal-800/5
+                  "
+                />
+              </label>
             </div>
 
             {/* ERROR */}
@@ -1219,9 +1390,9 @@ const Jobs = () => {
         </CursorCard>
       </div>
 
-      {/* ================================================================== */}
-      {/* RESULTS                                                             */}
-      {/* ================================================================== */}
+      {/* ====================================================================
+          RESULTS
+          ==================================================================== */}
 
       <section
         className="mt-8"
@@ -1260,56 +1431,9 @@ const Jobs = () => {
             </h2>
           </div>
 
-          <div
-            className="
-              inline-flex w-fit
-              rounded-md
-              border border-stone-200
-              bg-white p-1
-            "
-            role="tablist"
-            aria-label="Job result type"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={
-                activeTab === "recommended"
-              }
-              onClick={() =>
-                setActiveTab("recommended")
-              }
-              className={[
-                "rounded px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-800",
-                activeTab === "recommended"
-                  ? "bg-teal-950 text-white"
-                  : "text-stone-500 hover:text-teal-950",
-              ].join(" ")}
-            >
-              Recommended
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={
-                activeTab === "all"
-              }
-              onClick={() =>
-                setActiveTab("all")
-              }
-              className={[
-                "rounded px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-800",
-                activeTab === "all"
-                  ? "bg-teal-950 text-white"
-                  : "text-stone-500 hover:text-teal-950",
-              ].join(" ")}
-            >
-              All jobs
-            </button>
-          </div>
+          <p className="text-xs font-medium text-stone-400">
+            External job references
+          </p>
         </div>
 
         {/* LOADING */}
@@ -1471,7 +1595,7 @@ const Jobs = () => {
             </CursorCard>
           )}
 
-        {/* RESULTS */}
+        {/* JOB RESULTS */}
 
         {!isSearching &&
           jobs.length > 0 && (
@@ -1479,9 +1603,7 @@ const Jobs = () => {
               {jobs.map((job, index) => (
                 <JobCard
                   key={
-                    job?.id ||
-                    job?._id ||
-                    job?.url ||
+                    getJobIdentifier(job) ||
                     index
                   }
                   job={job}
@@ -1493,11 +1615,129 @@ const Jobs = () => {
               ))}
             </div>
           )}
+
+        {/* LOAD MORE ERROR */}
+
+        {loadMoreError && !isSearching && (
+          <div
+            className="
+              mt-6 rounded-lg
+              border border-red-200
+              bg-red-50 p-5
+            "
+          >
+            <p className="text-sm font-semibold text-red-950">
+              Unable to load more jobs.
+            </p>
+
+            <p className="mt-1 text-sm text-red-700">
+              {loadMoreError}
+            </p>
+
+            <button
+              type="button"
+              onClick={handleLoadMore}
+              disabled={isLoadingMore}
+              className="
+                mt-4 inline-flex
+                min-h-9 items-center gap-2
+                rounded-md
+                bg-teal-950
+                px-3.5
+                text-xs font-semibold
+                text-white
+                transition-transform duration-200
+                hover:-translate-y-0.5
+                disabled:cursor-not-allowed
+                disabled:opacity-60
+                focus-visible:outline-2
+                focus-visible:outline-offset-4
+                focus-visible:outline-teal-800
+              "
+            >
+              Try again
+            </button>
+          </div>
+        )}
+
+        {/* LOAD MORE */}
+
+        {!isSearching &&
+          hasMore &&
+          cacheKey &&
+          jobs.length > 0 && (
+            <div
+              className="
+                mt-8 flex flex-col
+                items-center justify-center
+              "
+            >
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="
+                  inline-flex min-h-11
+                  items-center justify-center
+                  gap-2 rounded-md
+                  border border-teal-950
+                  bg-white
+                  px-5
+                  text-sm font-semibold
+                  text-teal-950
+                  shadow-[0_5px_16px_rgba(28,25,23,0.05)]
+                  transition-[background-color,box-shadow,transform]
+                  duration-200
+                  hover:-translate-y-0.5
+                  hover:bg-teal-50
+                  hover:shadow-[0_9px_22px_rgba(28,25,23,0.08)]
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                  disabled:hover:translate-y-0
+                  focus-visible:outline-2
+                  focus-visible:outline-offset-4
+                  focus-visible:outline-teal-800
+                "
+                aria-busy={isLoadingMore}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <span
+                      className="
+                        size-4 animate-spin
+                        rounded-full
+                        border-2
+                        border-stone-300
+                        border-t-teal-950
+                      "
+                      aria-hidden="true"
+                    />
+
+                    Loading more...
+                  </>
+                ) : (
+                  <>
+                    <BriefcaseBusiness
+                      size={15}
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+
+                    Load more jobs
+                  </>
+                )}
+              </button>
+
+              <p className="mt-2 text-[11px] text-stone-400">
+                More opportunities are available from your job search cache.
+              </p>
+            </div>
+          )}
       </section>
 
-      {/* ================================================================== */}
-      {/* BOTTOM NOTE                                                         */}
-      {/* ================================================================== */}
+      {/* ====================================================================
+          BOTTOM NOTE
+          ==================================================================== */}
 
       <motion.div
         initial={
@@ -1513,14 +1753,12 @@ const Jobs = () => {
           y: 0,
         }}
         transition={{
-          duration:
-            prefersReducedMotion
-              ? 0
-              : 0.55,
-          delay:
-            prefersReducedMotion
-              ? 0
-              : 0.65,
+          duration: prefersReducedMotion
+            ? 0
+            : 0.55,
+          delay: prefersReducedMotion
+            ? 0
+            : 0.65,
           ease: pageEase,
         }}
         className="
