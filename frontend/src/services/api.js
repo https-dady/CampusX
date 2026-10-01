@@ -42,6 +42,31 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    /*
+     * FormData requests must not use the global JSON
+     * Content-Type header.
+     *
+     * The browser will automatically set:
+     *
+     * multipart/form-data; boundary=----...
+     *
+     * including the correct boundary required by Multer.
+     */
+    if (
+      typeof FormData !== "undefined" &&
+      config.data instanceof FormData
+    ) {
+      if (
+        config.headers &&
+        typeof config.headers.delete === "function"
+      ) {
+        config.headers.delete("Content-Type");
+      } else if (config.headers) {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
