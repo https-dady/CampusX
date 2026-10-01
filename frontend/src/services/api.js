@@ -4,9 +4,9 @@ const TOKEN_KEY = "campusx_token";
 const USER_KEY = "campusx_user";
 
 const PUBLIC_AUTH_ENDPOINTS = [
-  "/auth/signup",
   "/auth/login",
   "/auth/google",
+  "/auth/signup",
   "/auth/verify-otp",
   "/auth/resend-otp",
   "/auth/forgot-password",
@@ -14,25 +14,31 @@ const PUBLIC_AUTH_ENDPOINTS = [
   "/auth/reset-password",
 ];
 
+const isPublicAuthRequest = (url = "") =>
+  PUBLIC_AUTH_ENDPOINTS.some((endpoint) =>
+    url.includes(endpoint)
+  );
+
+const isInternalLearningCacheRequest = (url = "") =>
+  url.includes("/learning/cache/");
+
 const api = axios.create({
   baseURL:
     import.meta.env.VITE_API_URL ||
     "http://localhost:5000/api",
+
   timeout: 15000,
+
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-/*
- * Attach JWT token to every API request
- */
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_KEY);
 
     if (token) {
-      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
     }
 
@@ -41,24 +47,27 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/*
- * Handle expired / invalid JWT
- */
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
     const status = error?.response?.status;
     const requestUrl = error?.config?.url || "";
 
-    const isPublicAuthRequest = PUBLIC_AUTH_ENDPOINTS.some((endpoint) =>
-      requestUrl.includes(endpoint)
-    );
+    const isCacheRequest =
+      isInternalLearningCacheRequest(requestUrl);
 
-    if (status === 401 && !isPublicAuthRequest) {
+    if (
+      status === 401 &&
+      !isPublicAuthRequest(requestUrl) &&
+      !isCacheRequest
+    ) {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(USER_KEY);
 
-      if (window.location.pathname !== "/login") {
+      const currentPath = window.location.pathname;
+
+      if (currentPath !== "/login") {
         window.location.replace("/login");
       }
     }

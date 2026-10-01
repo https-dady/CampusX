@@ -14,6 +14,9 @@ const env = {
 
   N8N_WEBHOOK_URL: process.env.N8N_WEBHOOK_URL,
 
+  N8N_LEARNING_WEBHOOK_URL:
+  process.env.N8N_LEARNING_WEBHOOK_URL,
+
   AI_ENABLED: process.env.AI_ENABLED === "true",
 
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
