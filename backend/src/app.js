@@ -33,6 +33,9 @@ import jobCacheRoutes from "./routes/job-cache.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import interviewRoutes from "./routes/interview.routes.js";
 
+
+import communityRoutes from "./routes/community.routes.js";
+
 const app = express();
 
 app.use(helmet());
@@ -61,6 +64,12 @@ app.use(
 app.use(
   "/api/skill-gap",
   skillGapRoutes
+);
+
+
+app.use(
+  "/api/communities",
+  communityRoutes
 );
 
 app.use(morgan("dev"));
