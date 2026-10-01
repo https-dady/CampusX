@@ -23,6 +23,7 @@ import Assessment from "../pages/assessment/Assessment";
 import LearningRoadmap from "../pages/learning/LearningRoadmap.jsx";
 import CoursesResources from "../pages/learning/CoursesResources";
 import ResumeAnalysis from "../pages/profile/ResumeAnalysis";
+import ResumeBuilder from "../pages/profile/ResumeBuilder.jsx";
 import MockInterview from "../pages/interview/MockInterview.jsx";
 import Community from "../pages/community/Community.jsx";
 import CommunityChat from "../pages/community/CommunityChat.jsx";
@@ -162,6 +163,15 @@ const AppRoutes = () => {
             element={
               <WorkspaceLayout>
                 <ResumeAnalysis />
+              </WorkspaceLayout>
+            }
+          />
+
+          <Route
+            path="/resume-builder"
+            element={
+              <WorkspaceLayout>
+                <ResumeBuilder />
               </WorkspaceLayout>
             }
           />

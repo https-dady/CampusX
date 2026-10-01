@@ -834,25 +834,28 @@ def analyze_resume(
             "type": mimetype,
         },
         "extracted": {
-            "personal": resume[
-                "personal"
-            ],
-            "education": resume[
-                "education"
-            ],
-            "hasInternship": resume[
-                "hasInternship"
-            ],
-            "skills": resume[
-                "skills"
-            ],
-            "sections": resume[
-                "sections"
-            ],
-            "wordCount": resume[
-                "wordCount"
-            ],
-        },
+    "personal": resume[
+        "personal"
+    ],
+    "education": resume[
+        "education"
+    ],
+    "hasInternship": resume[
+        "hasInternship"
+    ],
+    "skills": resume[
+        "skills"
+    ],
+    "sections": resume[
+        "sections"
+    ],
+    "sectionText": resume[
+        "sectionText"
+    ],
+    "wordCount": resume[
+        "wordCount"
+    ],
+},
         "career": {
             "predictions": pairs[:5],
             "topMatch": top_career,

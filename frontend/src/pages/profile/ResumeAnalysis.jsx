@@ -12,10 +12,12 @@ import {
   X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 import { checkResume } from "../../services/resume.service.js";
 
 const pageEase = [0.22, 1, 0.36, 1];
+const RESUME_BUILDER_ANALYSIS_KEY = "campusx_resume_builder_analysis";
 
 const CursorCard = ({
   children,
@@ -172,6 +174,7 @@ const severityClass = (severity) => {
 const ResumeReport = ({
   result,
   onReset,
+  onBuildResume,
 }) => {
   const careerPredictions =
     result?.career?.predictions || [];
@@ -190,27 +193,6 @@ const ResumeReport = ({
 
   const summary =
     result?.summary || {};
-
-  const improvement =
-    result?.improvement || {};
-
-  const improvementScore =
-    improvement?.score || {};
-
-  const scoreComponents =
-    improvementScore?.components || {};
-
-  const strengths =
-    improvement?.strengths || [];
-
-  const prioritySuggestions =
-    improvement?.prioritySuggestions || [];
-
-  const quickWins =
-    improvement?.quickWins || [];
-
-  const improvementMetrics =
-    improvement?.metrics || {};
 
   return (
     <motion.section
@@ -301,263 +283,6 @@ const ResumeReport = ({
           </p>
         </div>
       </div>
-
-      <motion.section
-        initial={{
-          opacity: 0,
-          y: 12,
-        }}
-        animate={{
-          opacity: 1,
-          y: 0,
-        }}
-        transition={{
-          duration: 0.45,
-          ease: pageEase,
-        }}
-        className="mt-5 rounded-lg border border-teal-100 bg-[#f1f8f5] p-5 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-6"
-      >
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <Sparkles
-                size={17}
-                className="text-teal-800"
-              />
-
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-900">
-                Improvement report
-              </p>
-            </div>
-
-            <h3 className="mt-2 font-['Newsreader'] text-3xl font-semibold tracking-[-0.025em] text-[#10231f]">
-              Make the resume stronger.
-            </h3>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
-              This report turns the analysis into concrete areas to improve before you use the resume for applications.
-            </p>
-          </div>
-
-          <div className="flex size-24 shrink-0 flex-col items-center justify-center rounded-full border-4 border-white bg-white shadow-[0_5px_18px_rgba(28,25,23,0.06)]">
-            <span className="text-2xl font-bold text-teal-950">
-              {Number.isFinite(Number(improvementScore?.overall))
-                ? Math.round(Number(improvementScore.overall))
-                : "—"}
-            </span>
-
-            <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-stone-400">
-              Resume score
-            </span>
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            [
-              "Skills",
-              scoreComponents?.skills,
-            ],
-            [
-              "Structure",
-              scoreComponents?.structure,
-            ],
-            [
-              "Impact",
-              scoreComponents?.impact,
-            ],
-            [
-              "Bullet quality",
-              scoreComponents?.bulletQuality,
-            ],
-          ].map(([label, value]) => (
-            <div
-              key={label}
-              className="rounded-md border border-white bg-white/80 px-3.5 py-3"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-stone-400">
-                  {label}
-                </span>
-
-                <span className="text-xs font-bold text-teal-900">
-                  {Number.isFinite(Number(value))
-                    ? Math.round(Number(value))
-                    : "—"}
-                </span>
-              </div>
-
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-stone-100">
-                <div
-                  className="h-full rounded-full bg-teal-800 transition-all duration-500"
-                  style={{
-                    width: `${Math.min(100, Math.max(0, Number(value) || 0))}%`,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-5 grid gap-5 lg:grid-cols-2">
-          <div className="rounded-md border border-white bg-white p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-bold text-[#10231f]">
-                Priority improvements
-              </h4>
-
-              <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-800">
-                {prioritySuggestions.length} items
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {prioritySuggestions.length > 0 ? (
-                prioritySuggestions.map((item, index) => (
-                  <div
-                    key={`${index}-${String(item)}`}
-                    className="rounded-md border border-stone-100 bg-[#fffdf9] px-3.5 py-3"
-                  >
-                    <p className="text-xs font-medium leading-5 text-stone-600">
-                      {typeof item === "string"
-                        ? item
-                        : item?.message ||
-                          item?.suggestion ||
-                          item?.title ||
-                          JSON.stringify(item)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-stone-400">
-                  No priority suggestions were returned.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-md border border-white bg-white p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="text-sm font-bold text-[#10231f]">
-                Quick wins
-              </h4>
-
-              <span className="rounded-full bg-[#dcefe9] px-2 py-1 text-[10px] font-semibold text-teal-950">
-                {quickWins.length} items
-              </span>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {quickWins.length > 0 ? (
-                quickWins.map((item, index) => (
-                  <div
-                    key={`${index}-${String(item)}`}
-                    className="flex items-start gap-2.5 rounded-md border border-stone-100 bg-[#fffdf9] px-3.5 py-3"
-                  >
-                    <CheckCircle2
-                      size={15}
-                      className="mt-0.5 shrink-0 text-teal-800"
-                    />
-
-                    <p className="text-xs font-medium leading-5 text-stone-600">
-                      {typeof item === "string"
-                        ? item
-                        : item?.message ||
-                          item?.suggestion ||
-                          item?.title ||
-                          JSON.stringify(item)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-stone-400">
-                  No quick wins were returned.
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-md border border-white bg-white p-4 sm:p-5">
-            <h4 className="text-sm font-bold text-[#10231f]">
-              Current strengths
-            </h4>
-
-            <div className="mt-3 space-y-2">
-              {strengths.length > 0 ? (
-                strengths.map((item, index) => (
-                  <div
-                    key={`${index}-${String(item)}`}
-                    className="flex items-start gap-2.5"
-                  >
-                    <Check
-                      size={14}
-                      className="mt-0.5 shrink-0 text-teal-800"
-                    />
-
-                    <p className="text-xs leading-5 text-stone-600">
-                      {typeof item === "string"
-                        ? item
-                        : item?.message ||
-                          item?.title ||
-                          JSON.stringify(item)}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-stone-400">
-                  No strengths were returned.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-md border border-white bg-white p-4 sm:p-5">
-            <h4 className="text-sm font-bold text-[#10231f]">
-              Improvement metrics
-            </h4>
-
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {[
-                [
-                  "Detected skills",
-                  improvementMetrics?.detectedSkills,
-                ],
-                [
-                  "Required skills",
-                  improvementMetrics?.requiredSkills,
-                ],
-                [
-                  "Missing skills",
-                  improvementMetrics?.missingSkills,
-                ],
-                [
-                  "Action verbs",
-                  improvementMetrics?.actionVerbsDetected,
-                ],
-                [
-                  "Impact evidence",
-                  improvementMetrics?.impactEvidenceDetected,
-                ],
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between gap-3 rounded-md border border-stone-100 bg-[#fffdf9] px-3 py-2.5"
-                >
-                  <span className="text-[10px] font-medium text-stone-400">
-                    {label}
-                  </span>
-
-                  <span className="text-xs font-bold text-stone-700">
-                    {value ?? "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </motion.section>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-[0_8px_28px_rgba(28,25,23,0.025)] sm:p-6">
@@ -800,9 +525,8 @@ const ResumeReport = ({
 
           <button
             type="button"
-            disabled
-            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-teal-950 px-4 text-xs font-semibold text-white opacity-40"
-            title="Resume Builder is being implemented in the next phase."
+            onClick={onBuildResume}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md bg-teal-950 px-4 text-xs font-semibold text-white transition hover:bg-teal-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-teal-800"
           >
             Build improved resume
             <ArrowRight size={14} />
@@ -814,6 +538,8 @@ const ResumeReport = ({
 };
 
 const ResumeAnalysis = () => {
+  const navigate = useNavigate();
+
   const prefersReducedMotion =
     useReducedMotion();
 
@@ -967,6 +693,30 @@ const ResumeAnalysis = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const buildResume = () => {
+    if (!result) {
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(
+        RESUME_BUILDER_ANALYSIS_KEY,
+        JSON.stringify(result)
+      );
+    } catch (storageError) {
+      console.error(
+        "Unable to store resume analysis for the builder.",
+        storageError
+      );
+    }
+
+    navigate("/resume-builder", {
+      state: {
+        analysis: result,
+      },
+    });
   };
 
   const resetAnalysis = () => {
@@ -1292,6 +1042,7 @@ const ResumeAnalysis = () => {
         <ResumeReport
           result={result}
           onReset={resetAnalysis}
+          onBuildResume={buildResume}
         />
       )}
     </div>
