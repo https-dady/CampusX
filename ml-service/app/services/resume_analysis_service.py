@@ -13,6 +13,10 @@ from app.services.resume_extraction_service import (
     extract_text,
 )
 
+from app.services.resume_improvement_service import (
+    build_improvement_report,
+)
+
 
 # ============================================================================
 # NORMALIZATION
@@ -812,6 +816,18 @@ def analyze_resume(
         )
     )
 
+    # =========================================================================
+    # IMPROVEMENT REPORT
+    # =========================================================================
+
+    improvement = build_improvement_report(
+        resume=resume,
+        checks=checks,
+        top_career=top_career,
+        missing_skills=missing,
+        raw_text=text,
+    )
+
     return {
         "modelVersion": "resume-v1",
         "file": {
@@ -849,6 +865,7 @@ def analyze_resume(
             "missingForTopCareer": missing,
         },
         "checks": checks,
+        "improvement": improvement,
         "summary": {
             "totalIssues": sum(
                 1
