@@ -25,6 +25,7 @@ import CoursesResources from "../pages/learning/CoursesResources";
 import ResumeAnalysis from "../pages/profile/ResumeAnalysis";
 import MockInterview from "../pages/interview/MockInterview.jsx";
 import Community from "../pages/community/Community.jsx";
+import CommunityChat from "../pages/community/CommunityChat.jsx";
 import Feedback from "../pages/feedback/Feedback.jsx";
 import Jobs from "../pages/jobs/Jobs.jsx";
 
@@ -197,6 +198,15 @@ const AppRoutes = () => {
             element={
               <WorkspaceLayout>
                 <Jobs />
+              </WorkspaceLayout>
+            }
+          />
+
+          <Route
+            path="/community/:communityId"
+            element={
+              <WorkspaceLayout>
+                <CommunityChat />
               </WorkspaceLayout>
             }
           />

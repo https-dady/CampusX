@@ -39,77 +39,88 @@ const serializeMessage = (message) => ({
     message.updatedAt,
 });
 
-export const getCommunityMessages = async (
-  communityId,
-  userId,
-  {
-    limit = 30,
-    before,
-  } = {}
-) => {
-  await requireCommunityMember(
+/* ========================================================================== */
+/* GET COMMUNITY MESSAGES                                                    */
+/* ========================================================================== */
+
+export const getCommunityMessages =
+  async (
     communityId,
-    userId
-  );
+    userId,
+    {
+      limit = 30,
+      before,
+    } = {}
+  ) => {
+    await requireCommunityMember(
+      communityId,
+      userId
+    );
 
-  const query = {
-    community: communityId,
-  };
+    const query = {
+      community: communityId,
+    };
 
-  if (before) {
-    const beforeMessage =
-      await CommunityMessage.findOne({
-        _id: before,
-        community: communityId,
-      })
-        .select("createdAt")
-        .lean();
+    if (before) {
+      const beforeMessage =
+        await CommunityMessage.findOne({
+          _id: before,
+          community: communityId,
+        })
+          .select("createdAt")
+          .lean();
 
-    if (!beforeMessage) {
-      const error = new Error(
-        "Invalid message cursor."
-      );
+      if (!beforeMessage) {
+        const error = new Error(
+          "Invalid message cursor."
+        );
 
-      error.statusCode = 400;
+        error.statusCode = 400;
 
-      throw error;
+        throw error;
+      }
+
+      query.createdAt = {
+        $lt: beforeMessage.createdAt,
+      };
     }
 
-    query.createdAt = {
-      $lt: beforeMessage.createdAt,
+    const messages =
+      await CommunityMessage.find(query)
+        .sort({
+          createdAt: -1,
+        })
+        .limit(limit)
+        .populate(
+          "sender",
+          "name"
+        )
+        .lean();
+
+    messages.reverse();
+
+    const lastMessage =
+      messages[0] || null;
+
+    const hasMore =
+      messages.length === limit;
+
+    return {
+      messages:
+        messages.map(
+          serializeMessage
+        ),
+
+      hasMore,
+
+      nextBefore:
+        lastMessage?._id || null,
     };
-  }
-
-  const messages =
-    await CommunityMessage.find(query)
-      .sort({
-        createdAt: -1,
-      })
-      .limit(limit)
-      .populate(
-        "sender",
-        "name"
-      )
-      .lean();
-
-  messages.reverse();
-
-  const lastMessage =
-    messages[0] || null;
-
-  const hasMore =
-    messages.length === limit;
-
-  return {
-    messages:
-      messages.map(serializeMessage),
-
-    hasMore,
-
-    nextBefore:
-      lastMessage?._id || null,
   };
-};
+
+/* ========================================================================== */
+/* SEND COMMUNITY MESSAGE                                                    */
+/* ========================================================================== */
 
 export const sendCommunityMessage =
   async (
@@ -166,6 +177,10 @@ export const sendCommunityMessage =
     );
   };
 
+/* ========================================================================== */
+/* MARK MESSAGE DELIVERED                                                    */
+/* ========================================================================== */
+
 export const markMessageDelivered =
   async (
     communityId,
@@ -195,6 +210,10 @@ export const markMessageDelivered =
       throw error;
     }
 
+    /*
+     * Sender does not create a receipt
+     * for their own message.
+     */
     if (
       message.sender.toString() ===
       userId.toString()
@@ -204,29 +223,123 @@ export const markMessageDelivered =
 
     const now = new Date();
 
-    return CommunityMessageReceipt.findOneAndUpdate(
-      {
+    /*
+     * First check whether a receipt already exists.
+     */
+    const existingReceipt =
+      await CommunityMessageReceipt.findOne({
         message: messageId,
         user: userId,
-      },
-      {
-        $set: {
-          status: "delivered",
-          deliveredAt: now,
-        },
+      }).lean();
 
-        $setOnInsert: {
-          message: messageId,
-          user: userId,
-        },
-      },
-      {
-        upsert: true,
-        new: true,
-        setDefaultsOnInsert: true,
+    /*
+     * IMPORTANT:
+     *
+     * Receipt state can only move forward:
+     *
+     * sent -> delivered -> read
+     *
+     * A read receipt must NEVER become
+     * delivered again.
+     */
+    if (existingReceipt) {
+      if (
+        existingReceipt.status ===
+        "read"
+      ) {
+        return existingReceipt;
       }
-    ).lean();
+
+      if (
+        existingReceipt.status ===
+        "delivered"
+      ) {
+        return existingReceipt;
+      }
+
+      const updatedReceipt =
+        await CommunityMessageReceipt.findOneAndUpdate(
+          {
+            _id:
+              existingReceipt._id,
+
+            status: {
+              $ne: "read",
+            },
+          },
+          {
+            $set: {
+              status: "delivered",
+
+              deliveredAt:
+                existingReceipt.deliveredAt ||
+                now,
+            },
+          },
+          {
+            new: true,
+          }
+        ).lean();
+
+      /*
+       * If another request changed the receipt
+       * to read while this request was executing,
+       * fetch the final state instead of downgrading it.
+       */
+      if (!updatedReceipt) {
+        return (
+          CommunityMessageReceipt.findOne({
+            _id:
+              existingReceipt._id,
+          }).lean()
+        );
+      }
+
+      return updatedReceipt;
+    }
+
+    /*
+     * No receipt exists.
+     *
+     * Create exactly one receipt.
+     *
+     * The database has a unique
+     * { message, user } index, so concurrent
+     * requests cannot create duplicates.
+     */
+    try {
+      return await CommunityMessageReceipt.create({
+        message: messageId,
+
+        user: userId,
+
+        status: "delivered",
+
+        deliveredAt: now,
+      });
+    } catch (error) {
+      /*
+       * Another concurrent request may have
+       * inserted the receipt first.
+       */
+      if (
+        error?.code === 11000
+      ) {
+        return (
+          CommunityMessageReceipt.findOne({
+            message: messageId,
+            user: userId,
+          }).lean()
+        );
+      }
+
+      throw error;
+    }
   };
+
+/* ========================================================================== */
+/* MARK MESSAGE READ                                                         */
+/* ========================================================================== */
 
 export const markMessageRead =
   async (
@@ -261,6 +374,9 @@ export const markMessageRead =
 
     const now = new Date();
 
+    /*
+     * Keep community-level last-read tracking.
+     */
     await CommunityMember.updateOne(
       {
         _id: membership._id,
@@ -272,6 +388,10 @@ export const markMessageRead =
       }
     );
 
+    /*
+     * Sender does not create a receipt
+     * for their own message.
+     */
     if (
       message.sender.toString() ===
       userId.toString()
@@ -279,30 +399,118 @@ export const markMessageRead =
       return null;
     }
 
-    return CommunityMessageReceipt.findOneAndUpdate(
-      {
+    /*
+     * Check existing receipt first.
+     */
+    const existingReceipt =
+      await CommunityMessageReceipt.findOne({
         message: messageId,
         user: userId,
-      },
-      {
-        $set: {
-          status: "read",
-          deliveredAt: now,
-          readAt: now,
-        },
+      }).lean();
 
-        $setOnInsert: {
-          message: messageId,
-          user: userId,
-        },
-      },
-      {
-        upsert: true,
-        new: true,
-        setDefaultsOnInsert: true,
+    /*
+     * Already read.
+     *
+     * Do not modify timestamps again.
+     */
+    if (
+      existingReceipt?.status ===
+      "read"
+    ) {
+      return existingReceipt;
+    }
+
+    /*
+     * Existing delivered receipt.
+     *
+     * Preserve original deliveredAt.
+     */
+    if (existingReceipt) {
+      const updatedReceipt =
+        await CommunityMessageReceipt.findOneAndUpdate(
+          {
+            _id:
+              existingReceipt._id,
+
+            status: {
+              $ne: "read",
+            },
+          },
+          {
+            $set: {
+              status: "read",
+
+              deliveredAt:
+                existingReceipt.deliveredAt ||
+                now,
+
+              readAt:
+                existingReceipt.readAt ||
+                now,
+            },
+          },
+          {
+            new: true,
+          }
+        ).lean();
+
+      /*
+       * Another request may have changed
+       * the receipt to read first.
+       */
+      if (!updatedReceipt) {
+        return (
+          CommunityMessageReceipt.findOne({
+            _id:
+              existingReceipt._id,
+          }).lean()
+        );
       }
-    ).lean();
+
+      return updatedReceipt;
+    }
+
+    /*
+     * No receipt existed.
+     *
+     * If a message is read directly,
+     * it is considered delivered at the
+     * same moment.
+     */
+    try {
+      return await CommunityMessageReceipt.create({
+        message: messageId,
+
+        user: userId,
+
+        status: "read",
+
+        deliveredAt: now,
+
+        readAt: now,
+      });
+    } catch (error) {
+      /*
+       * Handle concurrent insert safely.
+       */
+      if (
+        error?.code === 11000
+      ) {
+        return (
+          CommunityMessageReceipt.findOne({
+            message: messageId,
+            user: userId,
+          }).lean()
+        );
+      }
+
+      throw error;
+    }
   };
+
+/* ========================================================================== */
+/* GET MESSAGE INFO                                                          */
+/* ========================================================================== */
 
 export const getMessageInfo =
   async (
@@ -315,12 +523,17 @@ export const getMessageInfo =
       userId
     );
 
+    /*
+     * Fetch the message first.
+     */
     const message =
       await CommunityMessage.findOne({
         _id: messageId,
         community: communityId,
       })
-        .select("sender")
+        .select(
+          "sender community createdAt"
+        )
         .lean();
 
     if (!message) {
@@ -333,6 +546,9 @@ export const getMessageInfo =
       throw error;
     }
 
+    /*
+     * Only sender can open message info.
+     */
     if (
       message.sender.toString() !==
       userId.toString()
@@ -346,12 +562,17 @@ export const getMessageInfo =
       throw error;
     }
 
+    /*
+     * Fetch receipts and eligible members
+     * in parallel.
+     */
     const [
       receipts,
-      messageDetails,
+      eligibleMembers,
     ] = await Promise.all([
       CommunityMessageReceipt.find({
         message: messageId,
+
         user: {
           $ne: userId,
         },
@@ -360,33 +581,23 @@ export const getMessageInfo =
           "user",
           "name"
         )
-        .sort({
-          readAt: 1,
-          deliveredAt: 1,
-          createdAt: 1,
-        })
         .lean(),
 
-      CommunityMessage.findById(
-        messageId
-      )
-        .select(
-          "community createdAt"
-        )
-        .lean(),
-    ]);
-
-    const eligibleMembers =
-      await CommunityMember.find({
+      CommunityMember.find({
         community: communityId,
 
         user: {
           $ne: userId,
         },
 
+        /*
+         * Only users who were members
+         * when this message was sent
+         * are recipients.
+         */
         joinedAt: {
           $lte:
-            messageDetails.createdAt,
+            message.createdAt,
         },
       })
         .select("user")
@@ -394,75 +605,177 @@ export const getMessageInfo =
           "user",
           "name"
         )
-        .lean();
+        .lean(),
+    ]);
 
+    /*
+     * Receipt lookup by USER ID.
+     *
+     * Never use name as the key because
+     * two users can have the same name.
+     */
     const receiptMap =
-      new Map(
-        receipts.map(
-          (receipt) => [
-            receipt.user?._id?.toString() ||
-              receipt.user?.toString(),
+      new Map();
 
-            receipt,
-          ]
-        )
+    for (
+      const receipt of receipts
+    ) {
+      const receiptUserId =
+        receipt.user?._id?.toString() ||
+        receipt.user?.toString();
+
+      if (!receiptUserId) {
+        continue;
+      }
+
+      receiptMap.set(
+        receiptUserId,
+        receipt
       );
+    }
 
-    const readBy = [];
-    const deliveredTo = [];
-    const sentTo = [];
+    /*
+     * Defensive member deduplication.
+     *
+     * Database already has a unique
+     * community + user index.
+     */
+    const memberMap =
+      new Map();
 
     for (
       const member of eligibleMembers
     ) {
-      const userIdString =
-        member.user?._id?.toString();
+      const memberUserId =
+        member.user?._id?.toString() ||
+        member.user?.toString();
 
-      const receipt =
-        receiptMap.get(
-          userIdString
-        );
-
-      const item = {
-        userId:
-          member.user?._id ||
-          member.user,
-
-        name:
-          member.user?.name ||
-          "CampusX user",
-
-        deliveredAt:
-          receipt?.deliveredAt ||
-          null,
-
-        readAt:
-          receipt?.readAt ||
-          null,
-      };
-
-      if (
-        receipt?.status ===
-        "read"
-      ) {
-        readBy.push(item);
+      if (!memberUserId) {
         continue;
       }
 
       if (
-        receipt?.status ===
-        "delivered"
+        memberMap.has(
+          memberUserId
+        )
       ) {
-        deliveredTo.push(item);
         continue;
       }
 
-      sentTo.push(item);
+      memberMap.set(
+        memberUserId,
+        member
+      );
     }
+
+    /*
+     * ONE recipient = ONE timeline.
+     *
+     * Sent is always present.
+     *
+     * Delivered and Read are timestamps
+     * on that same recipient.
+     */
+    const recipients =
+      Array.from(
+        memberMap.values()
+      ).map((member) => {
+        const recipientUserId =
+          member.user?._id ||
+          member.user;
+
+        const recipientUserIdString =
+          recipientUserId.toString();
+
+        const receipt =
+          receiptMap.get(
+            recipientUserIdString
+          );
+
+        let status = "sent";
+
+        if (
+          receipt?.status ===
+          "read"
+        ) {
+          status = "read";
+        } else if (
+          receipt?.status ===
+          "delivered"
+        ) {
+          status = "delivered";
+        }
+
+        return {
+          userId:
+            recipientUserId,
+
+          name:
+            member.user?.name ||
+            "CampusX user",
+
+          status,
+
+          sentAt:
+            message.createdAt,
+
+          deliveredAt:
+            receipt?.deliveredAt ||
+            null,
+
+          readAt:
+            receipt?.readAt ||
+            null,
+        };
+      });
+
+    /*
+     * Cumulative status groups.
+     */
+    const readBy =
+      recipients.filter(
+        (recipient) =>
+          recipient.status ===
+          "read"
+      );
+
+    const deliveredTo =
+      recipients.filter(
+        (recipient) =>
+          recipient.status ===
+            "delivered" ||
+          recipient.status ===
+            "read"
+      );
+
+    /*
+     * Every recipient was sent the message.
+     *
+     * This is intentionally NOT just
+     * the pending "sent" bucket.
+     */
+    const sentTo =
+      recipients;
 
     return {
       messageId,
 
+      recipients,
+
+      counts: {
+        sent:
+          recipients.length,
+
+        delivered:
+          deliveredTo.length,
+
+        read:
+          readBy.length,
+      },
+
+      /*
+       * Backward-compatible fields.
+       */
       readBy,
 
       deliveredTo,
