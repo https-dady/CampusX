@@ -16,3 +16,50 @@ export const getLearningCache = async (cacheKey) => {
 
   return response.data;
 };
+
+/**
+ * Fetch the authenticated user's personalized roadmap.
+ *
+ * Backend:
+ * GET /api/personalized-roadmap/me
+ */
+export const getMyPersonalizedRoadmap = async () => {
+  const response = await api.get(
+    "/personalized-roadmap/me"
+  );
+
+  return response.data;
+};
+
+/**
+ * Fetch the authenticated user's current career goal.
+ *
+ * Backend:
+ * GET /api/career-goal/me
+ */
+export const getMyCareerGoal = async () => {
+  const response = await api.get(
+    "/career-goal/me"
+  );
+
+  return response.data;
+};
+
+/**
+ * Fetch an active career roadmap by career and domain.
+ *
+ * Backend:
+ * GET /api/career-roadmap/:career/:domain
+ */
+export const getCareerRoadmap = async (
+  career,
+  domain
+) => {
+  const response = await api.get(
+    `/career-roadmap/${encodeURIComponent(
+      career
+    )}/${encodeURIComponent(domain)}`
+  );
+
+  return response.data;
+};
