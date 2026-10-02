@@ -11,7 +11,7 @@ export const createLearningPreference = async (
   try {
     const preference =
       await createOrUpdateLearningPreference({
-        userId: req.user.id,
+        userId: req.user.userId,
         language: req.body.language,
         preferredSources:
           req.body.preferredSources,
@@ -38,7 +38,7 @@ export const getLearningPreference = async (
   try {
     const preference =
       await getMyLearningPreference(
-        req.user.id
+        req.user.userId
       );
 
     return res.status(200).json({
