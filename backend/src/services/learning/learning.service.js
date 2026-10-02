@@ -6,6 +6,12 @@ import User from "../../models/user.model.js";
 
 const REQUEST_TIMEOUT_MS = 15000;
 
+const DEFAULT_PREFERRED_SOURCES = [
+  "government",
+  "official_documentation",
+  "courses",
+];
+
 const SKILL_ALIASES = {
   js: "javascript",
   javascript: "javascript",
@@ -73,6 +79,30 @@ const uniqueSkills = (skills = []) => {
   return result;
 };
 
+const normalizePreferredSources = (
+  sources = []
+) => {
+  if (!Array.isArray(sources)) {
+    return [];
+  }
+
+  return [
+    ...new Set(
+      sources
+        .filter(
+          (source) =>
+            typeof source === "string"
+        )
+        .map((source) =>
+          source
+            .trim()
+            .toLowerCase()
+        )
+        .filter(Boolean)
+    ),
+  ];
+};
+
 const calculateMissingSkills = ({
   targetSkills = [],
   userSkills = [],
@@ -97,7 +127,8 @@ const calculateMissingSkills = ({
 
     availableSkills:
       normalizedTargetSkills.filter(
-        (skill) => userSkillSet.has(skill)
+        (skill) =>
+          userSkillSet.has(skill)
       ),
 
     missingSkills,
@@ -121,9 +152,8 @@ const calculateMissingSkills = ({
  * Priority 4:
  *   Other learning resources
  *
- * IMPORTANT:
- * Resources are NOT removed.
- * They are only ordered by source priority.
+ * Resources are NOT removed here.
+ * They are ordered by source priority.
  */
 
 const normalizeUrl = (url) => {
@@ -173,7 +203,9 @@ const isSwayamResource = ({
 
   return (
     hostname === "swayam.gov.in" ||
-    hostname.endsWith(".swayam.gov.in") ||
+    hostname.endsWith(
+      ".swayam.gov.in"
+    ) ||
     text.includes("swayam")
   );
 };
@@ -193,14 +225,18 @@ const isNptelResource = ({
 
   return (
     hostname === "nptel.ac.in" ||
-    hostname.endsWith(".nptel.ac.in") ||
-    hostname === "onlinecourses.nptel.ac.in" ||
-    hostname.endsWith(".nptel.ac.in") ||
+    hostname.endsWith(
+      ".nptel.ac.in"
+    ) ||
+    hostname ===
+      "onlinecourses.nptel.ac.in" ||
     text.includes("nptel")
   );
 };
 
-const isGovernmentDomain = (hostname) => {
+const isGovernmentDomain = (
+  hostname
+) => {
   if (!hostname) {
     return false;
   }
@@ -221,31 +257,37 @@ const isGovernmentDomain = (hostname) => {
 const isOfficialTechnologyResource = ({
   hostname,
 }) => {
-  const officialTechnologyDomains = new Set([
-    "developer.mozilla.org",
-    "react.dev",
-    "reactjs.org",
-    "nodejs.org",
-    "expressjs.com",
-    "mongodb.com",
-    "docs.mongodb.com",
-    "typescriptlang.org",
-    "docs.python.org",
-    "python.org",
-    "git-scm.com",
-    "developer.android.com",
-    "kotlinlang.org",
-    "docs.oracle.com",
-    "docs.github.com",
-  ]);
+  const officialTechnologyDomains =
+    new Set([
+      "developer.mozilla.org",
+      "react.dev",
+      "reactjs.org",
+      "nodejs.org",
+      "expressjs.com",
+      "mongodb.com",
+      "docs.mongodb.com",
+      "typescriptlang.org",
+      "docs.python.org",
+      "python.org",
+      "git-scm.com",
+      "developer.android.com",
+      "kotlinlang.org",
+      "docs.oracle.com",
+      "docs.github.com",
+    ]);
 
   return officialTechnologyDomains.has(
     hostname
   );
 };
 
-const classifyResourceSource = (resource) => {
-  const url = normalizeUrl(resource?.url);
+const classifyResourceSource = (
+  resource
+) => {
+  const url = normalizeUrl(
+    resource?.url
+  );
+
   const hostname = getHostname(url);
 
   const title =
@@ -290,7 +332,8 @@ const classifyResourceSource = (resource) => {
     return {
       sourcePriority: 2,
       sourceCategory: "official",
-      sourceName: "Government / Academic",
+      sourceName:
+        "Government / Academic",
       isPrioritySource: true,
     };
   }
@@ -303,7 +346,8 @@ const classifyResourceSource = (resource) => {
     return {
       sourcePriority: 3,
       sourceCategory: "official",
-      sourceName: "Official Documentation",
+      sourceName:
+        "Official Documentation",
       isPrioritySource: false,
     };
   }
@@ -311,7 +355,8 @@ const classifyResourceSource = (resource) => {
   return {
     sourcePriority: 4,
     sourceCategory: "other",
-    sourceName: "Learning Resource",
+    sourceName:
+      "Learning Resource",
     isPrioritySource: false,
   };
 };
@@ -322,7 +367,9 @@ const prioritizeLearningResources = (
   return resources
     .map((resource, index) => {
       const classification =
-        classifyResourceSource(resource);
+        classifyResourceSource(
+          resource
+        );
 
       return {
         ...resource,
@@ -371,18 +418,18 @@ const buildLearningRequest = ({
   techStack,
   missingSkills,
   preferredLanguage,
+  preferredSources,
 }) => {
   /*
-   * Existing n8n contract remains unchanged:
+   * Existing n8n request fields remain:
    *
    * {
    *   domain,
    *   techStack
    * }
    *
-   * preferredLanguage is retained in the
-   * personalization context and is not injected
-   * into the existing n8n payload.
+   * Preference fields are added without
+   * removing the existing contract.
    */
 
   const requestedSkills =
@@ -408,7 +455,12 @@ const buildLearningRequest = ({
     techStack: mergedSkills,
 
     preferredLanguage:
-      preferredLanguage || "english",
+      preferredLanguage || "English",
+
+    preferredSources:
+      preferredSources?.length
+        ? preferredSources
+        : DEFAULT_PREFERRED_SOURCES,
   };
 };
 
@@ -438,7 +490,9 @@ const validateLearningResponse = (
     throw error;
   }
 
-  if (!Array.isArray(response.resources)) {
+  if (
+    !Array.isArray(response.resources)
+  ) {
     const error = new Error(
       "Learning workflow returned an invalid resources list."
     );
@@ -450,7 +504,8 @@ const validateLearningResponse = (
 
   if (
     response.cacheKey !== undefined &&
-    typeof response.cacheKey !== "string"
+    typeof response.cacheKey !==
+      "string"
   ) {
     const error = new Error(
       "Learning workflow returned an invalid cache key."
@@ -463,7 +518,8 @@ const validateLearningResponse = (
 
   if (
     response.hasMore !== undefined &&
-    typeof response.hasMore !== "boolean"
+    typeof response.hasMore !==
+      "boolean"
   ) {
     const error = new Error(
       "Learning workflow returned an invalid hasMore value."
@@ -478,10 +534,14 @@ const validateLearningResponse = (
     response.resources.filter(
       (resource) =>
         resource &&
-        typeof resource.title === "string" &&
-        typeof resource.url === "string" &&
-        typeof resource.type === "string" &&
-        typeof resource.description === "string"
+        typeof resource.title ===
+          "string" &&
+        typeof resource.url ===
+          "string" &&
+        typeof resource.type ===
+          "string" &&
+        typeof resource.description ===
+          "string"
     );
 
   const prioritizedResources =
@@ -552,7 +612,8 @@ const getLearningContext = async (
   if (
     user.onboarding?.status !==
       "journey_selected" ||
-    user.onboarding?.journeyType !== "learn"
+    user.onboarding?.journeyType !==
+      "learn"
   ) {
     const error = new Error(
       "Learning resources are available only for the I WANT TO LEARN journey."
@@ -569,90 +630,114 @@ const getLearningContext = async (
     learningPreference,
 
     userSkills:
-      user.profile?.technicalSkills || [],
+      user.profile?.technicalSkills ||
+      [],
   };
 };
 
-export const prepareLearningRequest = async (
-  learningData,
-  userId = null
-) => {
-  if (!learningData) {
-    const error = new Error(
-      "Learning request is required."
-    );
+export const prepareLearningRequest =
+  async (
+    learningData,
+    userId = null
+  ) => {
+    if (!learningData) {
+      const error = new Error(
+        "Learning request is required."
+      );
 
-    error.statusCode = 400;
+      error.statusCode = 400;
 
-    throw error;
-  }
+      throw error;
+    }
 
-  if (
-    !learningData.domain ||
-    !learningData.techStack?.length
-  ) {
-    const error = new Error(
-      "Domain and at least one technology are required."
-    );
+    if (
+      !learningData.domain ||
+      !learningData.techStack?.length
+    ) {
+      const error = new Error(
+        "Domain and at least one technology are required."
+      );
 
-    error.statusCode = 400;
+      error.statusCode = 400;
 
-    throw error;
-  }
+      throw error;
+    }
 
-  const context =
-    await getLearningContext(userId);
+    const context =
+      await getLearningContext(
+        userId
+      );
 
-  const targetSkills =
-    context.learningGoal?.targetSkills
-      ?.length
-      ? context.learningGoal.targetSkills
-      : learningData.techStack;
+    const targetSkills =
+      context.learningGoal
+        ?.targetSkills?.length
+        ? context.learningGoal
+            .targetSkills
+        : learningData.techStack;
 
-  const skillGap =
-    calculateMissingSkills({
-      targetSkills,
-      userSkills:
-        context.userSkills,
-    });
+    const skillGap =
+      calculateMissingSkills({
+        targetSkills,
 
-  const preferredLanguage =
-    context.learningPreference
-      ?.preferredLanguage ||
-    "english";
+        userSkills:
+          context.userSkills,
+      });
 
-  const request =
-    buildLearningRequest({
-      domain:
-        context.learningGoal?.domain ||
-        learningData.domain,
+    /*
+     * IMPORTANT:
+     * LearningPreference model uses
+     * `language`, not `preferredLanguage`.
+     */
+    const preferredLanguage =
+      context.learningPreference
+        ?.language || "English";
 
-      techStack:
-        learningData.techStack,
+    const preferredSources =
+      normalizePreferredSources(
+        context.learningPreference
+          ?.preferredSources
+      );
 
-      missingSkills:
-        skillGap.missingSkills,
+    const request =
+      buildLearningRequest({
+        domain:
+          context.learningGoal
+            ?.domain ||
+          learningData.domain,
 
-      preferredLanguage,
-    });
+        techStack:
+          learningData.techStack,
 
-  return {
-    request,
+        missingSkills:
+          skillGap.missingSkills,
 
-    context: {
-      preferredLanguage,
+        preferredLanguage,
 
-      targetSkills:
-        skillGap.targetSkills,
+        preferredSources,
+      });
 
-      availableSkills:
-        skillGap.availableSkills,
+    return {
+      request,
 
-      missingSkills:
-        skillGap.missingSkills,
-    },
+      context: {
+        preferredLanguage,
+
+        preferredSources:
+          preferredSources.length
+            ? preferredSources
+            : DEFAULT_PREFERRED_SOURCES,
+
+        targetSkills:
+          skillGap.targetSkills,
+
+        availableSkills:
+          skillGap.availableSkills,
+
+        missingSkills:
+          skillGap.missingSkills,
+      },
+    };
   };
-};
 
 export const getLearningResources =
   async (
@@ -696,15 +781,15 @@ export const getLearningResources =
           },
 
           /*
-           * Existing n8n request contract
-           * remains unchanged.
+           * Existing request fields are
+           * preserved and preference fields
+           * are added.
            */
           body: JSON.stringify(
             prepared.request
           ),
 
-          signal:
-            controller.signal,
+          signal: controller.signal,
         }
       );
 
@@ -747,6 +832,10 @@ export const getLearningResources =
             prepared.context
               .preferredLanguage,
 
+          preferredSources:
+            prepared.context
+              .preferredSources,
+
           targetSkills:
             prepared.context
               .targetSkills,
@@ -762,8 +851,7 @@ export const getLearningResources =
       };
     } catch (error) {
       if (
-        error.name ===
-        "AbortError"
+        error.name === "AbortError"
       ) {
         const timeoutError =
           new Error(
