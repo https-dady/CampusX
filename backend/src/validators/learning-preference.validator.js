@@ -1,16 +1,49 @@
 import { z } from "zod";
 
-export const upsertLearningPreferenceSchema = z
+const SUPPORTED_SOURCE_TYPES = [
+  "government",
+  "official_documentation",
+  "courses",
+];
+
+export const createLearningPreferenceSchema = z
   .object({
-    preferredLanguage: z
+    language: z
       .string()
       .trim()
-      .toLowerCase()
-      .refine(
-        (value) => ["english", "hindi"].includes(value),
-        {
-          message: "preferredLanguage must be either english or hindi",
-        }
+      .min(1, "Language is required.")
+      .max(50, "Language must not exceed 50 characters."),
+
+    preferredSources: z
+      .array(
+        z.enum(SUPPORTED_SOURCE_TYPES, {
+          errorMap: () => ({
+            message: "Invalid learning resource source.",
+          }),
+        })
+      )
+      .min(1, "At least one preferred source is required.")
+      .max(
+        SUPPORTED_SOURCE_TYPES.length,
+        "Too many preferred sources selected."
       ),
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const uniqueSources = new Set(data.preferredSources);
+
+    if (
+      uniqueSources.size !==
+      data.preferredSources.length
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["preferredSources"],
+        message:
+          "Preferred sources must not contain duplicates.",
+      });
+    }
+  });
+
+export const updateLearningPreferenceSchema =
+  createLearningPreferenceSchema;
