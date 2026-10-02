@@ -10,16 +10,29 @@ const learningPreferenceSchema = new mongoose.Schema(
       index: true,
     },
 
-    preferredLanguage: {
+    language: {
       type: String,
-      enum: ["english", "hindi"],
       required: true,
-      default: "english",
+      trim: true,
+      maxlength: 50,
+      default: "English",
+    },
+
+    preferredSources: {
+      type: [String],
+      required: true,
+      default: [],
+      enum: [
+        "government",
+        "official_documentation",
+        "courses",
+      ],
     },
 
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
     },
   },
   {
@@ -28,7 +41,9 @@ const learningPreferenceSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model(
+const LearningPreference = mongoose.model(
   "LearningPreference",
   learningPreferenceSchema
 );
+
+export default LearningPreference;
