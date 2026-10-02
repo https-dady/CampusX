@@ -3,27 +3,30 @@ import {
   getMyLearningPreference,
 } from "../services/learning/learning-preference.service.js";
 
-export const upsertLearningPreference = async (
+export const createLearningPreference = async (
   req,
   res,
   next
 ) => {
   try {
-    const result =
+    const preference =
       await createOrUpdateLearningPreference({
-        userId: req.user.userId,
-        preferredLanguage:
-          req.body.preferredLanguage,
+        userId: req.user.id,
+        language: req.body.language,
+        preferredSources:
+          req.body.preferredSources,
       });
 
     return res.status(200).json({
       success: true,
       message:
-        "Learning preferences saved successfully",
-      data: result,
+        "Learning preferences saved successfully.",
+      data: {
+        preference,
+      },
     });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 };
 
@@ -33,16 +36,20 @@ export const getLearningPreference = async (
   next
 ) => {
   try {
-    const result =
+    const preference =
       await getMyLearningPreference(
-        req.user.userId
+        req.user.id
       );
 
     return res.status(200).json({
       success: true,
-      data: result,
+      message:
+        "Learning preferences fetched successfully.",
+      data: {
+        preference,
+      },
     });
   } catch (error) {
-    return next(error);
+    next(error);
   }
 };

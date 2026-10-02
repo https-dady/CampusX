@@ -4,11 +4,11 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import validate from "../middleware/validation.middleware.js";
 
 import {
-  upsertLearningPreferenceSchema,
+  createLearningPreferenceSchema,
 } from "../validators/learning-preference.validator.js";
 
 import {
-  upsertLearningPreference,
+  createLearningPreference,
   getLearningPreference,
 } from "../controllers/learning-preference.controller.js";
 
@@ -23,8 +23,8 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  validate(upsertLearningPreferenceSchema),
-  upsertLearningPreference
+  validate(createLearningPreferenceSchema),
+  createLearningPreference
 );
 
 export default router;
