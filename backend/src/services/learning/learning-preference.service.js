@@ -1,81 +1,106 @@
 import LearningPreference from "../../models/learning-preference.model.js";
 import User from "../../models/user.model.js";
 
-const ALLOWED_LANGUAGES = new Set(["english", "hindi"]);
-
 const normalizeLanguage = (language) => {
-  const normalized = String(language || "")
+  return language
     .trim()
-    .toLowerCase();
-
-  if (!ALLOWED_LANGUAGES.has(normalized)) {
-    throw new Error("Unsupported learning language");
-  }
-
-  return normalized;
+    .replace(/\s+/g, " ");
 };
 
-const ensureLearnJourney = async (userId) => {
+const normalizeSources = (sources) => {
+  return [
+    ...new Set(
+      sources.map((source) =>
+        source.trim().toLowerCase()
+      )
+    ),
+  ];
+};
+
+const ensureLearningJourney = async (userId) => {
   const user = await User.findById(userId)
-    .select("onboarding.status onboarding.journeyType")
+    .select("onboarding")
     .lean();
 
   if (!user) {
-    const error = new Error("User not found");
+    const error = new Error("User not found.");
     error.statusCode = 404;
     throw error;
   }
 
   if (
-    user.onboarding?.status !== "journey_selected" ||
+    user.onboarding?.status !==
+      "journey_selected" ||
     user.onboarding?.journeyType !== "learn"
   ) {
     const error = new Error(
-      "Learning preferences are available only after selecting the I WANT TO LEARN journey"
+      "Learning preferences are available only for the I WANT TO LEARN journey."
     );
 
-    error.statusCode = 400;
+    error.statusCode = 403;
+
     throw error;
   }
+
+  return user;
 };
 
-export const createOrUpdateLearningPreference = async ({
-  userId,
-  preferredLanguage,
-}) => {
-  await ensureLearnJourney(userId);
-
-  const language = normalizeLanguage(preferredLanguage);
-
-  const preference = await LearningPreference.findOneAndUpdate(
-    { userId },
-    {
-      $set: {
-        preferredLanguage: language,
-        isActive: true,
-      },
-    },
-    {
-      new: true,
-      upsert: true,
-      setDefaultsOnInsert: true,
-    }
-  ).lean();
-
-  return {
-    preference,
-  };
-};
-
-export const getMyLearningPreference = async (userId) => {
-  await ensureLearnJourney(userId);
-
-  const preference = await LearningPreference.findOne({
+export const createOrUpdateLearningPreference =
+  async ({
     userId,
-    isActive: true,
-  }).lean();
+    language,
+    preferredSources,
+  }) => {
+    await ensureLearningJourney(userId);
 
-  return {
-    preference,
+    const normalizedLanguage =
+      normalizeLanguage(language);
+
+    const normalizedSources =
+      normalizeSources(preferredSources);
+
+    const preference =
+      await LearningPreference.findOneAndUpdate(
+        {
+          userId,
+        },
+        {
+          $set: {
+            language: normalizedLanguage,
+            preferredSources: normalizedSources,
+            isActive: true,
+          },
+        },
+        {
+          new: true,
+          upsert: true,
+          runValidators: true,
+          setDefaultsOnInsert: true,
+        }
+      ).lean();
+
+    return preference;
   };
-};
+
+export const getMyLearningPreference =
+  async (userId) => {
+    await ensureLearningJourney(userId);
+
+    const preference =
+      await LearningPreference.findOne({
+        userId,
+        isActive: true,
+      }).lean();
+
+    if (!preference) {
+      const error = new Error(
+        "Learning preferences not found."
+      );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    return preference;
+  };
