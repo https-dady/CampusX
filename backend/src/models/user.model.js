@@ -181,6 +181,41 @@ const profileSchema = new mongoose.Schema(
   }
 );
 
+const onboardingSchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: [
+        "profile_incomplete",
+        "profile_completed",
+        "career_analyzed",
+        "journey_selected",
+      ],
+      default: "profile_incomplete",
+    },
+
+    profileCompletedAt: {
+      type: Date,
+    },
+
+    careerAnalyzedAt: {
+      type: Date,
+    },
+
+    journeyType: {
+      type: String,
+      enum: [
+        "learn",
+        "dream_job",
+        "profile_jobs",
+      ],
+    },
+  },
+  {
+    _id: false,
+  }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -269,6 +304,11 @@ const userSchema = new mongoose.Schema(
     // Employability profile
     profile: {
       type: profileSchema,
+      default: () => ({}),
+    },
+
+    onboarding: {
+      type: onboardingSchema,
       default: () => ({}),
     },
   },

@@ -34,6 +34,10 @@ import interviewRoutes from "./routes/interview.routes.js";
 
 import communityRoutes from "./routes/community.routes.js";
 import resumeRoutes from "./routes/resume.routes.js";
+import onboardingRoutes from "./routes/onboarding.routes.js";
+
+import learningGoalRoutes from "./routes/learning-goal.routes.js";
+import learningPreferenceRoutes from "./routes/learning-preference.routes.js";
 
 const app = express();
 
@@ -112,6 +116,11 @@ app.use(
 );
 
 app.use(
+  "/api/onboarding",
+  onboardingRoutes
+);
+
+app.use(
   "/api/ml",
   mlRoutes
 );
@@ -174,6 +183,16 @@ app.use(
 app.use(
   "/api/interview",
   interviewRoutes
+);
+
+app.use(
+  "/api/learning-goal",
+  learningGoalRoutes
+);
+
+app.use(
+  "/api/learning-preference",
+  learningPreferenceRoutes
 );
 
 /*

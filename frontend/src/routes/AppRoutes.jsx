@@ -5,8 +5,9 @@ import {
 } from "react-router-dom";
 
 import LandingPage from "../pages/LandingPage.jsx";
-// import GoogleTest from "../pages/auth/GoogleTest.jsx";
+
 import Signup from "../pages/auth/Signup.jsx";
+
 import VoiceInterviewTest from "../pages/interview/VoiceInterviewTest.jsx";
 import GeminiLiveInterviewTest from "../pages/interview/GeminiLiveInterviewTest.jsx";
 
@@ -18,17 +19,27 @@ import ProtectedRoute from "../components/auth/ProtectedRoute.jsx";
 import Overview from "../pages/dashboard/Overview.jsx";
 import MyProfile from "../pages/profile/MyProfile.jsx";
 import SkillsInterests from "../pages/profile/SkillsInterests.jsx";
+
 import CareerInsights from "../pages/career/CareerInsights.jsx";
+
 import Assessment from "../pages/assessment/Assessment";
+
 import LearningRoadmap from "../pages/learning/LearningRoadmap.jsx";
 import CoursesResources from "../pages/learning/CoursesResources";
+
 import ResumeAnalysis from "../pages/profile/ResumeAnalysis";
 import ResumeBuilder from "../pages/profile/ResumeBuilder.jsx";
+
 import MockInterview from "../pages/interview/MockInterview.jsx";
+
 import Community from "../pages/community/Community.jsx";
 import CommunityChat from "../pages/community/CommunityChat.jsx";
+
 import Feedback from "../pages/feedback/Feedback.jsx";
+
 import Jobs from "../pages/jobs/Jobs.jsx";
+
+import Onboarding from "../pages/onboarding/Onboarding.jsx";
 
 import Login from "../pages/auth/Login.jsx";
 import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
@@ -53,11 +64,6 @@ const AppRoutes = () => {
           element={<Signup />}
         />
 
-        {/* <Route
-          path="/google-test"
-          element={<GoogleTest />}
-        /> */}
-
         <Route
           path="/interview/voice-test"
           element={<VoiceInterviewTest />}
@@ -65,7 +71,9 @@ const AppRoutes = () => {
 
         <Route
           path="/interview/gemini-voice-test"
-          element={<GeminiLiveInterviewTest />}
+          element={
+            <GeminiLiveInterviewTest />
+          }
         />
 
         <Route
@@ -88,12 +96,18 @@ const AppRoutes = () => {
           element={<VerifyEmail />}
         />
 
-
         {/* =========================
             PROTECTED WORKSPACE ROUTES
         ========================== */}
 
-        <Route element={<ProtectedRoute />}>
+        <Route
+          element={<ProtectedRoute />}
+        >
+
+          <Route
+            path="/onboarding"
+            element={<Onboarding />}
+          />
 
           <Route
             path="/dashboard"
