@@ -3,7 +3,9 @@ import multer from "multer";
 
 import {
   createSession,
+  createLiveSession,
   submitAnswer,
+  submitLiveTurn,
   endSession,
   generateQuestionAudio,
   submitVoiceAnswer,
@@ -16,25 +18,42 @@ import {
   validateInterviewId,
 } from "../validators/interview.validator.js";
 
-const router = express.Router();
+const router =
+  express.Router();
 
-const upload = multer({
-  storage: multer.memoryStorage(),
+const upload =
+  multer({
+    storage:
+      multer.memoryStorage(),
 
-  limits: {
-    fileSize: 10 * 1024 * 1024,
-  },
+    limits: {
+      fileSize:
+        10 * 1024 * 1024,
+    },
 
-  fileFilter: (req, file, callback) => {
-    if (!file.mimetype.startsWith("audio/")) {
-      return callback(
-        new Error("Only audio files are allowed.")
+    fileFilter: (
+      req,
+      file,
+      callback
+    ) => {
+      if (
+        !file.mimetype.startsWith(
+          "audio/"
+        )
+      ) {
+        return callback(
+          new Error(
+            "Only audio files are allowed."
+          )
+        );
+      }
+
+      callback(
+        null,
+        true
       );
-    }
-
-    callback(null, true);
-  },
-});
+    },
+  });
 
 router.post(
   "/session",
@@ -42,6 +61,11 @@ router.post(
   createSession
 );
 
+router.post(
+  "/live/session",
+  authMiddleware,
+  createLiveSession
+);
 
 router.post(
   "/live-token",
@@ -49,12 +73,18 @@ router.post(
   createLiveToken
 );
 
-
 router.post(
   "/:id/answer",
   authMiddleware,
   validateInterviewId,
   submitAnswer
+);
+
+router.post(
+  "/:id/live-turn",
+  authMiddleware,
+  validateInterviewId,
+  submitLiveTurn
 );
 
 router.post(

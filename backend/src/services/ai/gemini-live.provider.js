@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import env from "../../config/env.js";
 
 const MODEL =
-  "gemini-2.5-flash-native-audio-preview-12-2025";
+  "gemini-3.8-live";
 
 const createClient = () => {
   if (!env.GEMINI_API_KEY) {
@@ -59,6 +59,8 @@ Difficulty: ${difficulty}
 Interview rules:
 
 - Ask exactly one question at a time.
+- There is NO fixed question limit. Continue the interview naturally until the application/user explicitly ends the session.
+- Never decide on your own that the interview is complete.
 - Keep every question relevant to the target role.
 - Focus on practical technical knowledge.
 - Ask follow-up questions based on the candidate's answer.
