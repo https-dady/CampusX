@@ -36,16 +36,14 @@ const SKILL_ALIASES = {
   "machine learning": "machine learning",
 
   ai: "artificial intelligence",
-  "artificial intelligence":
-    "artificial intelligence",
+  "artificial intelligence": "artificial intelligence",
 
   ds: "data science",
   "data science": "data science",
 
   dbms: "database management systems",
   database: "database management systems",
-  "database management systems":
-    "database management systems",
+  "database management systems": "database management systems",
 };
 
 const normalizeSkill = (skill) => {
@@ -79,9 +77,7 @@ const uniqueSkills = (skills = []) => {
   return result;
 };
 
-const normalizePreferredSources = (
-  sources = []
-) => {
+const normalizePreferredSources = (sources = []) => {
   if (!Array.isArray(sources)) {
     return [];
   }
@@ -119,7 +115,8 @@ const calculateMissingSkills = ({
 
   const missingSkills =
     normalizedTargetSkills.filter(
-      (skill) => !userSkillSet.has(skill)
+      (skill) =>
+        !userSkillSet.has(skill)
     );
 
   return {
@@ -152,8 +149,8 @@ const calculateMissingSkills = ({
  * Priority 4:
  *   Other learning resources
  *
- * Resources are NOT removed here.
- * They are ordered by source priority.
+ * Source priority is applied AFTER
+ * relevance filtering in the n8n workflow.
  */
 
 const normalizeUrl = (url) => {
@@ -203,9 +200,7 @@ const isSwayamResource = ({
 
   return (
     hostname === "swayam.gov.in" ||
-    hostname.endsWith(
-      ".swayam.gov.in"
-    ) ||
+    hostname.endsWith(".swayam.gov.in") ||
     text.includes("swayam")
   );
 };
@@ -225,18 +220,13 @@ const isNptelResource = ({
 
   return (
     hostname === "nptel.ac.in" ||
-    hostname.endsWith(
-      ".nptel.ac.in"
-    ) ||
-    hostname ===
-      "onlinecourses.nptel.ac.in" ||
+    hostname.endsWith(".nptel.ac.in") ||
+    hostname === "onlinecourses.nptel.ac.in" ||
     text.includes("nptel")
   );
 };
 
-const isGovernmentDomain = (
-  hostname
-) => {
+const isGovernmentDomain = (hostname) => {
   if (!hostname) {
     return false;
   }
@@ -274,6 +264,7 @@ const isOfficialTechnologyResource = ({
       "kotlinlang.org",
       "docs.oracle.com",
       "docs.github.com",
+      "web.dev",
     ]);
 
   return officialTechnologyDomains.has(
@@ -281,9 +272,7 @@ const isOfficialTechnologyResource = ({
   );
 };
 
-const classifyResourceSource = (
-  resource
-) => {
+const classifyResourceSource = (resource) => {
   const url = normalizeUrl(
     resource?.url
   );
@@ -355,8 +344,7 @@ const classifyResourceSource = (
   return {
     sourcePriority: 4,
     sourceCategory: "other",
-    sourceName:
-      "Learning Resource",
+    sourceName: "Learning Resource",
     isPrioritySource: false,
   };
 };
@@ -416,21 +404,13 @@ const prioritizeLearningResources = (
 const buildLearningRequest = ({
   domain,
   techStack,
+  targetSkills,
   missingSkills,
   preferredLanguage,
   preferredSources,
 }) => {
-  /*
-   * Existing n8n request fields remain:
-   *
-   * {
-   *   domain,
-   *   techStack
-   * }
-   *
-   * Preference fields are added without
-   * removing the existing contract.
-   */
+  const normalizedTargetSkills =
+    uniqueSkills(targetSkills);
 
   const requestedSkills =
     uniqueSkills(techStack);
@@ -438,6 +418,11 @@ const buildLearningRequest = ({
   const prioritizedMissingSkills =
     uniqueSkills(missingSkills);
 
+  /*
+   * Missing skills are placed first so the
+   * n8n search workflow can focus on the
+   * actual skill gap.
+   */
   const mergedSkills = [
     ...prioritizedMissingSkills,
 
@@ -452,7 +437,19 @@ const buildLearningRequest = ({
   return {
     domain,
 
+    /*
+     * Existing contract preserved.
+     */
     techStack: mergedSkills,
+
+    /*
+     * Explicit skill-gap context for n8n.
+     */
+    targetSkills:
+      normalizedTargetSkills,
+
+    missingSkills:
+      prioritizedMissingSkills,
 
     preferredLanguage:
       preferredLanguage || "English",
@@ -491,7 +488,9 @@ const validateLearningResponse = (
   }
 
   if (
-    !Array.isArray(response.resources)
+    !Array.isArray(
+      response.resources
+    )
   ) {
     const error = new Error(
       "Learning workflow returned an invalid resources list."
@@ -504,8 +503,7 @@ const validateLearningResponse = (
 
   if (
     response.cacheKey !== undefined &&
-    typeof response.cacheKey !==
-      "string"
+    typeof response.cacheKey !== "string"
   ) {
     const error = new Error(
       "Learning workflow returned an invalid cache key."
@@ -518,8 +516,7 @@ const validateLearningResponse = (
 
   if (
     response.hasMore !== undefined &&
-    typeof response.hasMore !==
-      "boolean"
+    typeof response.hasMore !== "boolean"
   ) {
     const error = new Error(
       "Learning workflow returned an invalid hasMore value."
@@ -684,9 +681,7 @@ export const prepareLearningRequest =
       });
 
     /*
-     * IMPORTANT:
-     * LearningPreference model uses
-     * `language`, not `preferredLanguage`.
+     * LearningPreference uses `language`.
      */
     const preferredLanguage =
       context.learningPreference
@@ -707,6 +702,9 @@ export const prepareLearningRequest =
 
         techStack:
           learningData.techStack,
+
+        targetSkills:
+          skillGap.targetSkills,
 
         missingSkills:
           skillGap.missingSkills,
@@ -780,11 +778,6 @@ export const getLearningResources =
               "application/json",
           },
 
-          /*
-           * Existing request fields are
-           * preserved and preference fields
-           * are added.
-           */
           body: JSON.stringify(
             prepared.request
           ),

@@ -18,14 +18,17 @@ export const getLearningCache = async (cacheKey) => {
 };
 
 /**
- * Fetch the authenticated user's personalized roadmap.
+ * Fetch the authenticated user's personalized learning roadmap.
+ *
+ * This endpoint is specifically for the
+ * I WANT TO LEARN journey.
  *
  * Backend:
- * GET /api/personalized-roadmap/me
+ * GET /api/personalized-roadmap/learning/me
  */
 export const getMyPersonalizedRoadmap = async () => {
   const response = await api.get(
-    "/personalized-roadmap/me"
+    "/personalized-roadmap/learning/me"
   );
 
   return response.data;

@@ -26,6 +26,7 @@ import Assessment from "../pages/assessment/Assessment";
 
 import LearningRoadmap from "../pages/learning/LearningRoadmap.jsx";
 import CoursesResources from "../pages/learning/CoursesResources";
+import LearningGoal from "../pages/learning/LearningGoal.jsx";
 
 import ResumeAnalysis from "../pages/profile/ResumeAnalysis";
 import ResumeBuilder from "../pages/profile/ResumeBuilder.jsx";
@@ -39,7 +40,7 @@ import Feedback from "../pages/feedback/Feedback.jsx";
 
 import Jobs from "../pages/jobs/Jobs.jsx";
 
-import Onboarding from "../pages/onboarding/Onboarding.jsx";
+import OnboardingRouteGate from "../pages/onboarding/OnboardingRouteGate.jsx";
 
 import Login from "../pages/auth/Login.jsx";
 import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
@@ -106,7 +107,9 @@ const AppRoutes = () => {
 
           <Route
             path="/onboarding"
-            element={<Onboarding />}
+            element={
+              <OnboardingRouteGate />
+            }
           />
 
           <Route
@@ -151,6 +154,13 @@ const AppRoutes = () => {
               <WorkspaceLayout>
                 <CareerInsights />
               </WorkspaceLayout>
+            }
+          />
+
+          <Route
+            path="/learning-goal"
+            element={
+              <LearningGoal />
             }
           />
 
