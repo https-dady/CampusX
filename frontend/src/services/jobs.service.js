@@ -11,26 +11,47 @@ export const searchJobs = async ({
   };
 
   if (location?.trim()) {
-    payload.location = location.trim();
+    payload.location =
+      location.trim();
   }
 
   if (experienceLevel?.trim()) {
-    payload.experienceLevel = experienceLevel.trim();
+    payload.experienceLevel =
+      experienceLevel.trim();
   }
 
   if (employmentType?.trim()) {
-    payload.employmentType = employmentType.trim();
+    payload.employmentType =
+      employmentType.trim();
   }
 
-  const response = await api.post("/jobs/search", payload);
+  const response =
+    await api.post(
+      "/jobs/search",
+      payload
+    );
 
   return response.data;
 };
 
-export const getJobCache = async (cacheKey) => {
-  const response = await api.get(
-    `/jobs/cache/${encodeURIComponent(cacheKey)}`
-  );
+export const searchProfileJobs =
+  async () => {
+    const response =
+      await api.get(
+        "/jobs/profile"
+      );
 
-  return response.data;
-};
+    return response.data;
+  };
+
+export const getJobCache =
+  async (cacheKey) => {
+    const response =
+      await api.get(
+        `/jobs/cache/${encodeURIComponent(
+          cacheKey
+        )}`
+      );
+
+    return response.data;
+  };

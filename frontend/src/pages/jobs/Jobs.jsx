@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useSearchParams } from "react-router-dom";
 import {
   BriefcaseBusiness,
   Building2,
@@ -18,6 +19,7 @@ import {
 import {
   getJobCache,
   searchJobs,
+  searchProfileJobs,
 } from "../../services/jobs.service";
 
 const pageEase = [0.22, 1, 0.36, 1];
@@ -628,6 +630,7 @@ const JobCard = ({
 
 const Jobs = () => {
   const prefersReducedMotion = useReducedMotion();
+  const [searchParams] = useSearchParams();
 
   const [role, setRole] = useState("");
   const [location, setLocation] = useState("");
@@ -656,14 +659,20 @@ const Jobs = () => {
      SEARCH
      ------------------------------------------------------------------------ */
 
-  const handleSearch = async (event) => {
-    event.preventDefault();
+  const runJobSearch = async ({
+    targetRole = role,
+    profileMode = false,
+  } = {}) => {
+    const normalizedRole =
+      typeof targetRole === "string"
+        ? targetRole.trim()
+        : "";
 
     setError("");
     setLoadMoreError("");
     setHasSearched(true);
 
-    if (!role.trim()) {
+    if (!profileMode && !normalizedRole) {
       setError(
         "Please enter the role or area you want to search for."
       );
@@ -678,18 +687,32 @@ const Jobs = () => {
     try {
       setIsSearching(true);
 
-      const response = await searchJobs({
-        targetRole: role,
-        location,
-        experienceLevel: experience,
-        employmentType,
-      });
+      const response = profileMode
+        ? await searchProfileJobs()
+        : await searchJobs({
+            targetRole: normalizedRole,
+            location,
+            experienceLevel: experience,
+            employmentType,
+          });
 
       if (!response?.success) {
         throw new Error(
           response?.message ||
             "Unable to search for jobs right now."
         );
+      }
+
+      if (profileMode) {
+        const predictedRole =
+          typeof response?.data?.targetRole ===
+          "string"
+            ? response.data.targetRole.trim()
+            : "";
+
+        if (predictedRole) {
+          setRole(predictedRole);
+        }
       }
 
       const nextJobs =
@@ -728,6 +751,34 @@ const Jobs = () => {
       setIsSearching(false);
     }
   };
+
+  const handleSearch = async (event) => {
+    event.preventDefault();
+
+    await runJobSearch({
+      targetRole: role,
+      profileMode: false,
+    });
+  };
+
+  useEffect(() => {
+    const source = searchParams.get("source") || "";
+    const requestedRole =
+      searchParams.get("role")?.trim() || "";
+
+    if (source !== "profile" && !requestedRole) {
+      return;
+    }
+
+    if (requestedRole) {
+      setRole(requestedRole);
+    }
+
+    runJobSearch({
+      targetRole: requestedRole,
+      profileMode: source === "profile",
+    });
+  }, [searchParams]);
 
   /* ------------------------------------------------------------------------
      CLEAR

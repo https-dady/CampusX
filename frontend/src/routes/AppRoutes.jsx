@@ -21,6 +21,7 @@ import MyProfile from "../pages/profile/MyProfile.jsx";
 import SkillsInterests from "../pages/profile/SkillsInterests.jsx";
 
 import CareerInsights from "../pages/career/CareerInsights.jsx";
+import DreamJob from "../pages/career/DreamJob.jsx";
 
 import Assessment from "../pages/assessment/Assessment";
 
@@ -40,7 +41,6 @@ import Feedback from "../pages/feedback/Feedback.jsx";
 
 import Jobs from "../pages/jobs/Jobs.jsx";
 import ProfileJobs from "../pages/jobs/ProfileJobs.jsx";
-
 
 import Login from "../pages/auth/Login.jsx";
 import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
@@ -102,9 +102,7 @@ const AppRoutes = () => {
             PROTECTED WORKSPACE ROUTES
         ========================== */}
 
-        <Route
-          element={<ProtectedRoute />}
-        >
+        <Route element={<ProtectedRoute />}>
 
           <Route
             path="/onboarding"
@@ -156,11 +154,15 @@ const AppRoutes = () => {
             }
           />
 
+          {/* =========================
+              DREAM JOB
+          ========================== */}
+
           <Route
             path="/dream-job"
             element={
               <WorkspaceLayout>
-                <CareerInsights />
+                <DreamJob />
               </WorkspaceLayout>
             }
           />
@@ -235,6 +237,10 @@ const AppRoutes = () => {
             }
           />
 
+          {/* =========================
+              JOBS
+          ========================== */}
+
           <Route
             path="/jobs"
             element={
@@ -252,6 +258,10 @@ const AppRoutes = () => {
               </WorkspaceLayout>
             }
           />
+
+          {/* =========================
+              COMMUNITY CHAT
+          ========================== */}
 
           <Route
             path="/community/:communityId"
