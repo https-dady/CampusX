@@ -52,6 +52,12 @@ const stepSchema = z
       .transform(normalizeList)
       .optional(),
 
+    prerequisites: z
+      .array(technologySchema)
+      .max(20, "Too many prerequisites")
+      .transform(normalizeList)
+      .optional(),
+
     order: z
       .coerce
       .number()
@@ -74,7 +80,7 @@ export const createLearningRoadmapSchema = z
       .array(stepSchema)
       .min(1, "At least one roadmap step is required")
       .max(100, "Too many roadmap steps"),
-    
+
     isActive: z.boolean().optional(),
   })
   .strict();

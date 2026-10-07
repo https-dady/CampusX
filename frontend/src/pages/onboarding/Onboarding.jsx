@@ -32,6 +32,10 @@ import {
 } from "../../services/career.service";
 
 import {
+  useOnboardingState,
+} from "../../components/auth/OnboardingStateContext.jsx";
+
+import {
   updateMyProfile,
 } from "../../services/profile.service";
 
@@ -110,6 +114,10 @@ const Onboarding = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
 
+  const {
+    setOnboardingState,
+  } = useOnboardingState();
+
   const [loading, setLoading] =
     useState(true);
 
@@ -180,24 +188,22 @@ const Onboarding = () => {
 
     const load = async () => {
       try {
-        const result =
-          await getOnboarding();
+        const result = await getOnboarding();
 
         if (!mounted) {
           return;
         }
 
-        setState(
-          result?.data || null
-        );
+        const nextState = result?.data || null;
+        setState(nextState);
+        setOnboardingState(nextState);
       } catch (requestError) {
         if (!mounted) {
           return;
         }
 
         setError(
-          requestError?.response?.data
-            ?.message ||
+          requestError?.response?.data?.message ||
             requestError?.message ||
             "Unable to load onboarding."
         );
@@ -213,7 +219,7 @@ const Onboarding = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [setOnboardingState]);
 
   const handleFile = async (file) => {
     setError("");
@@ -442,21 +448,20 @@ const Onboarding = () => {
       const completionResult =
         await completeOnboardingProfile();
 
-      setState((current) => ({
-        ...(current || {}),
-
+      const nextState = {
+        ...(state || {}),
         onboarding:
-          completionResult?.data
-            ?.onboarding || {
-            status:
-              "profile_completed",
-
+          completionResult?.data?.onboarding || {
+            status: "profile_completed",
             profileCompletion: {
               isComplete: true,
               missingFields: [],
             },
           },
-      }));
+      };
+
+      setState(nextState);
+      setOnboardingState(nextState);
 
       setSuccess(
         "Profile completed successfully. Your career analysis is ready to begin."
@@ -491,14 +496,17 @@ const Onboarding = () => {
           analysis
         );
 
-        const onboardingResult =
-          await getOnboarding();
-
         const nextState =
-          onboardingResult?.data ||
-          null;
+          result?.data?.onboarding
+            ? {
+                ...state,
+                onboarding:
+                  result.data.onboarding,
+              }
+            : state;
 
         setState(nextState);
+        setOnboardingState(nextState);
 
         if (
           nextState?.onboarding
@@ -539,20 +547,27 @@ const Onboarding = () => {
             journeyType
           );
 
-        setState((current) => ({
-          ...(current || {}),
-
+        const nextState = {
+          ...(state || {}),
           onboarding:
             result?.data?.onboarding ||
-            current?.onboarding ||
+            state?.onboarding ||
             {},
-        }));
+        };
 
-        setSuccess(
-          `${getJourneyLabel(
-            journeyType
-          )} selected successfully.`
-        );
+        setState(nextState);
+        setOnboardingState(nextState);
+
+        const destination =
+          journeyType === "learn"
+            ? "/learning-goal"
+            : journeyType === "dream_job"
+              ? "/dream-job"
+              : "/jobs/profile";
+
+        navigate(destination, {
+          replace: true,
+        });
       } catch (requestError) {
         setError(
           requestError?.response?.data
@@ -573,11 +588,7 @@ const Onboarding = () => {
           role="status"
           aria-live="polite"
         >
-          <Loader2
-            size={16}
-            className="animate-spin"
-          />
-
+          <Loader2 size={16} className="animate-spin" />
           Preparing your career journey...
         </div>
       </main>

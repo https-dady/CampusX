@@ -42,9 +42,12 @@ const normalizeList = (values) => {
   return result;
 };
 
-const hasText = (value) => Boolean(normalizeText(value));
+const hasText = (value) =>
+  Boolean(normalizeText(value));
 
-const getMissingProfileFields = (profile = {}) => {
+const getMissingProfileFields = (
+  profile = {}
+) => {
   const education = profile.education || {};
   const missing = [];
 
@@ -77,23 +80,35 @@ const getMissingProfileFields = (profile = {}) => {
   return missing;
 };
 
-const getProfileCompletion = (profile = {}) => {
-  const missingFields = getMissingProfileFields(profile);
+const getProfileCompletion = (
+  profile = {}
+) => {
+  const missingFields =
+    getMissingProfileFields(profile);
 
   return {
-    isComplete: missingFields.length === 0,
+    isComplete:
+      missingFields.length === 0,
     missingFields,
   };
 };
 
-const buildResumeProfileDraft = (analysis) => {
-  const extracted = analysis?.extracted || {};
-  const personal = extracted.personal || {};
-  const education = extracted.education || {};
+const buildResumeProfileDraft = (
+  analysis
+) => {
+  const extracted =
+    analysis?.extracted || {};
 
-  const technicalSkills = normalizeList(
-    extracted.skills || []
-  );
+  const personal =
+    extracted.personal || {};
+
+  const education =
+    extracted.education || {};
+
+  const technicalSkills =
+    normalizeList(
+      extracted.skills || []
+    );
 
   const draft = {
     technicalSkills,
@@ -102,13 +117,25 @@ const buildResumeProfileDraft = (analysis) => {
       extracted.hasInternship === true,
 
     education: {
-      degree: normalizeText(education.degree),
-      branch: normalizeText(education.branch),
+      degree:
+        normalizeText(
+          education.degree
+        ),
+
+      branch:
+        normalizeText(
+          education.branch
+        ),
+
       university: "",
+
       academicYear:
-        education.academicYear ?? undefined,
+        education.academicYear ??
+        undefined,
+
       cgpa:
-        education.cgpa ?? undefined,
+        education.cgpa ??
+        undefined,
     },
   };
 
@@ -116,29 +143,55 @@ const buildResumeProfileDraft = (analysis) => {
     profile: draft,
 
     personal: {
-      name: normalizeText(personal.name),
-      email: normalizeText(personal.email).toLowerCase(),
-      phone: normalizeText(personal.phone),
+      name:
+        normalizeText(
+          personal.name
+        ),
+
+      email:
+        normalizeText(
+          personal.email
+        ).toLowerCase(),
+
+      phone:
+        normalizeText(
+          personal.phone
+        ),
     },
 
     source: {
       modelVersion:
-        analysis?.modelVersion || null,
+        analysis?.modelVersion ||
+        null,
 
-      detectedSkills: technicalSkills,
+      detectedSkills:
+        technicalSkills,
     },
   };
 };
 
-const getOnboardingState = (user) => {
-  const profile = user.profile || {};
-  const completion = getProfileCompletion(profile);
-  const onboarding = user.onboarding || {};
+const getOnboardingState = (
+  user
+) => {
+  const profile =
+    user.profile || {};
+
+  const completion =
+    getProfileCompletion(
+      profile
+    );
+
+  const onboarding =
+    user.onboarding || {};
 
   return {
     status:
       onboarding.status ||
       "profile_incomplete",
+
+    resumeAnalyzedAt:
+      onboarding.resumeAnalyzedAt ||
+      null,
 
     profileCompletedAt:
       onboarding.profileCompletedAt ||
@@ -152,178 +205,296 @@ const getOnboardingState = (user) => {
       onboarding.journeyType ||
       null,
 
-    profileCompletion: completion,
+    profileCompletion:
+      completion,
   };
 };
 
-export const getMyOnboardingState = async (userId) => {
-  const user = await User.findById(userId)
-    .select("_id name email profile onboarding")
-    .lean();
+export const getMyOnboardingState =
+  async (userId) => {
+    const user =
+      await User.findById(
+        userId
+      )
+        .select(
+          "_id name email profile onboarding"
+        )
+        .lean();
 
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
-  }
+    if (!user) {
+      const error =
+        new Error(
+          "User not found"
+        );
 
-  return {
-    id: user._id,
-    name: user.name,
-    email: user.email,
-    onboarding: getOnboardingState(user),
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    return {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      onboarding:
+        getOnboardingState(
+          user
+        ),
+    };
   };
-};
 
-export const createResumeProfileDraft = async (
-  userId,
-  analysis
-) => {
-  const user = await User.findById(userId)
-    .select("_id profile onboarding")
-    .lean();
+export const createResumeProfileDraft =
+  async (
+    userId,
+    analysis
+  ) => {
+    const user =
+      await User.findById(
+        userId
+      )
+        .select(
+          "_id profile onboarding"
+        )
+        .lean();
 
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
-  }
+    if (!user) {
+      const error =
+        new Error(
+          "User not found"
+        );
 
-  const draft =
-    buildResumeProfileDraft(analysis);
+      error.statusCode = 404;
 
-  return {
-    ...draft,
+      throw error;
+    }
 
-    completion: getProfileCompletion({
-      ...(user.profile || {}),
+    const draft =
+      buildResumeProfileDraft(
+        analysis
+      );
 
-      ...draft.profile,
-
-      education: {
-        ...(user.profile?.education || {}),
-        ...(draft.profile.education || {}),
-      },
-    }),
-  };
-};
-
-export const markProfileCompleted = async (
-  userId
-) => {
-  const user = await User.findById(userId)
-    .select("profile onboarding")
-    .lean();
-
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const completion =
-    getProfileCompletion(user.profile || {});
-
-  if (!completion.isComplete) {
-    const error = new Error(
-      "Profile is incomplete. Complete all required fields before continuing."
-    );
-
-    error.statusCode = 400;
-    error.missingFields =
-      completion.missingFields;
-
-    throw error;
-  }
-
-  const profileCompletedAt =
-    new Date();
-
-  const updatedUser =
     await User.findByIdAndUpdate(
       userId,
       {
         $set: {
-          "onboarding.status":
-            "profile_completed",
-
-          "onboarding.profileCompletedAt":
-            profileCompletedAt,
+          "onboarding.resumeAnalyzedAt":
+            new Date(),
         },
       },
       {
-        new: true,
-        projection:
-          "_id profile onboarding",
+        runValidators: true,
       }
-    ).lean();
+    );
 
-  return {
-    onboarding: {
-      ...getOnboardingState(updatedUser),
+    return {
+      ...draft,
 
-      profileCompletion:
-        completion,
-    },
+      completion:
+        getProfileCompletion({
+          ...(user.profile || {}),
+
+          ...draft.profile,
+
+          education: {
+            ...(user.profile
+              ?.education || {}),
+
+            ...(draft.profile
+              .education || {}),
+          },
+        }),
+    };
   };
-};
 
-export const selectOnboardingJourney = async (
-  userId,
-  journeyType
-) => {
-  if (!ALLOWED_JOURNEY_TYPES.has(journeyType)) {
-    const error = new Error(
-      "Invalid journey type. Choose learn, dream_job, or profile_jobs."
-    );
+export const markProfileCompleted =
+  async (userId) => {
+    const user =
+      await User.findById(
+        userId
+      )
+        .select(
+          "profile onboarding"
+        )
+        .lean();
 
-    error.statusCode = 400;
-    throw error;
-  }
+    if (!user) {
+      const error =
+        new Error(
+          "User not found"
+        );
 
-  const user = await User.findById(userId)
-    .select("_id onboarding")
-    .lean();
+      error.statusCode = 404;
 
-  if (!user) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
-  }
+      throw error;
+    }
 
-  const onboarding = user.onboarding || {};
+    const completion =
+      getProfileCompletion(
+        user.profile || {}
+      );
 
-  if (onboarding.status !== "career_analyzed") {
-    const error = new Error(
-      "Complete career analysis before selecting a career journey."
-    );
+    const onboarding =
+      user.onboarding || {};
 
-    error.statusCode = 400;
-    throw error;
-  }
+    if (
+      onboarding.status ===
+        "profile_completed" ||
+      onboarding.status ===
+        "career_analyzed" ||
+      onboarding.status ===
+        "journey_selected"
+    ) {
+      return {
+        onboarding:
+          getOnboardingState(
+            user
+          ),
+      };
+    }
 
-  const updatedUser =
-    await User.findByIdAndUpdate(
-      userId,
-      {
-        $set: {
-          "onboarding.status":
-            "journey_selected",
+    if (
+      !onboarding.resumeAnalyzedAt
+    ) {
+      const error =
+        new Error(
+          "Analyze your resume before completing your profile."
+        );
 
-          "onboarding.journeyType":
-            journeyType,
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    if (
+      !completion.isComplete
+    ) {
+      const error =
+        new Error(
+          "Profile is incomplete. Complete all required fields before continuing."
+        );
+
+      error.statusCode = 400;
+
+      error.missingFields =
+        completion.missingFields;
+
+      throw error;
+    }
+
+    const profileCompletedAt =
+      new Date();
+
+    const updatedUser =
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            "onboarding.status":
+              "profile_completed",
+
+            "onboarding.profileCompletedAt":
+              profileCompletedAt,
+          },
         },
-      },
-      {
-        new: true,
-        projection:
-          "_id profile onboarding",
-      }
-    ).lean();
+        {
+          new: true,
+          projection:
+            "_id profile onboarding",
+        }
+      ).lean();
 
-  return {
-    onboarding: getOnboardingState(
-      updatedUser
-    ),
+    return {
+      onboarding: {
+        ...getOnboardingState(
+          updatedUser
+        ),
+
+        profileCompletion:
+          completion,
+      },
+    };
   };
-};
+
+export const selectOnboardingJourney =
+  async (
+    userId,
+    journeyType
+  ) => {
+    if (
+      !ALLOWED_JOURNEY_TYPES.has(
+        journeyType
+      )
+    ) {
+      const error =
+        new Error(
+          "Invalid journey type. Choose learn, dream_job, or profile_jobs."
+        );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    const user =
+      await User.findById(
+        userId
+      )
+        .select(
+          "_id onboarding"
+        )
+        .lean();
+
+    if (!user) {
+      const error =
+        new Error(
+          "User not found"
+        );
+
+      error.statusCode = 404;
+
+      throw error;
+    }
+
+    const onboarding =
+      user.onboarding || {};
+
+    if (
+      onboarding.status !==
+      "career_analyzed"
+    ) {
+      const error =
+        new Error(
+          "Complete career analysis before selecting a career journey."
+        );
+
+      error.statusCode = 400;
+
+      throw error;
+    }
+
+    const updatedUser =
+      await User.findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            "onboarding.status":
+              "journey_selected",
+
+            "onboarding.journeyType":
+              journeyType,
+          },
+        },
+        {
+          new: true,
+          projection:
+            "_id profile onboarding",
+        }
+      ).lean();
+
+    return {
+      onboarding:
+        getOnboardingState(
+          updatedUser
+        ),
+    };
+  };

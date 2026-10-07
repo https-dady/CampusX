@@ -1,6 +1,8 @@
 import api from "./api.js";
 
-export const getLearningResources = async (learningData) => {
+export const getLearningResources = async (
+  learningData
+) => {
   const response = await api.post(
     "/learning/resources",
     learningData
@@ -9,30 +11,48 @@ export const getLearningResources = async (learningData) => {
   return response.data;
 };
 
-export const getLearningCache = async (cacheKey) => {
+export const getLearningCache = async (
+  cacheKey
+) => {
   const response = await api.get(
-    `/learning/cache/${encodeURIComponent(cacheKey)}`
+    `/learning/cache/${encodeURIComponent(
+      cacheKey
+    )}`
   );
 
   return response.data;
 };
 
 /**
- * Fetch the authenticated user's personalized learning roadmap.
+ * Fetch the authenticated user's personalized roadmap.
  *
- * This endpoint is specifically for the
- * I WANT TO LEARN journey.
+ * Backend:
+ * GET /api/personalized-roadmap/me
+ */
+export const getMyPersonalizedRoadmap =
+  async () => {
+    const response = await api.get(
+      "/personalized-roadmap/me"
+    );
+
+    return response.data;
+  };
+
+/**
+ * Fetch the authenticated user's personalized
+ * learning roadmap.
  *
  * Backend:
  * GET /api/personalized-roadmap/learning/me
  */
-export const getMyPersonalizedRoadmap = async () => {
-  const response = await api.get(
-    "/personalized-roadmap/learning/me"
-  );
+export const getMyPersonalizedLearningRoadmap =
+  async () => {
+    const response = await api.get(
+      "/personalized-roadmap/learning/me"
+    );
 
-  return response.data;
-};
+    return response.data;
+  };
 
 /**
  * Fetch the authenticated user's current career goal.

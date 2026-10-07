@@ -39,12 +39,13 @@ import CommunityChat from "../pages/community/CommunityChat.jsx";
 import Feedback from "../pages/feedback/Feedback.jsx";
 
 import Jobs from "../pages/jobs/Jobs.jsx";
+import ProfileJobs from "../pages/jobs/ProfileJobs.jsx";
 
-import OnboardingRouteGate from "../pages/onboarding/OnboardingRouteGate.jsx";
 
 import Login from "../pages/auth/Login.jsx";
 import ForgotPassword from "../pages/auth/ForgotPassword.jsx";
 import VerifyEmail from "../pages/auth/VerifyEmail.jsx";
+import Onboarding from "../pages/onboarding/Onboarding.jsx";
 
 const AppRoutes = () => {
   return (
@@ -107,9 +108,7 @@ const AppRoutes = () => {
 
           <Route
             path="/onboarding"
-            element={
-              <OnboardingRouteGate />
-            }
+            element={<Onboarding />}
           />
 
           <Route
@@ -150,6 +149,15 @@ const AppRoutes = () => {
 
           <Route
             path="/career-insights"
+            element={
+              <WorkspaceLayout>
+                <CareerInsights />
+              </WorkspaceLayout>
+            }
+          />
+
+          <Route
+            path="/dream-job"
             element={
               <WorkspaceLayout>
                 <CareerInsights />
@@ -232,6 +240,15 @@ const AppRoutes = () => {
             element={
               <WorkspaceLayout>
                 <Jobs />
+              </WorkspaceLayout>
+            }
+          />
+
+          <Route
+            path="/jobs/profile"
+            element={
+              <WorkspaceLayout>
+                <ProfileJobs />
               </WorkspaceLayout>
             }
           />

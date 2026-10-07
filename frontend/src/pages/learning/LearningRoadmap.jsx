@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   ArrowRight,
@@ -13,8 +14,6 @@ import {
 import { motion, useReducedMotion } from "framer-motion";
 
 import {
-  getCareerRoadmap,
-  getMyCareerGoal,
   getMyPersonalizedRoadmap,
 } from "../../services/learning.service";
 
@@ -178,15 +177,27 @@ const normalizeRoadmapSteps = (steps = []) => {
 
       description:
         step?.description ||
-        "Follow this step as part of your career roadmap.",
+        "Follow this step as part of your personalized learning roadmap.",
 
-      skills: Array.isArray(step?.skills)
-        ? step.skills.filter(
+      /*
+       * Backend learning roadmap uses `technologies`.
+       *
+       * `skills` is kept as a backward-compatible fallback
+       * in case older roadmap data still contains that field.
+       */
+      skills: Array.isArray(step?.technologies)
+        ? step.technologies.filter(
             (skill) =>
               typeof skill === "string" &&
               skill.trim()
           )
-        : [],
+        : Array.isArray(step?.skills)
+          ? step.skills.filter(
+              (skill) =>
+                typeof skill === "string" &&
+                skill.trim()
+            )
+          : [],
 
       resources: Array.isArray(step?.resources)
         ? step.resources.filter(Boolean)
@@ -196,10 +207,9 @@ const normalizeRoadmapSteps = (steps = []) => {
 
 const LearningRoadmap = () => {
   const prefersReducedMotion = useReducedMotion();
+  const navigate = useNavigate();
 
   const [roadmap, setRoadmap] = useState(null);
-  const [roadmapSource, setRoadmapSource] =
-    useState("personalized");
 
   const [activeStep, setActiveStep] =
     useState(null);
@@ -218,8 +228,12 @@ const LearningRoadmap = () => {
 
     try {
       /*
-       * Primary source:
-       * GET /api/personalized-roadmap/me
+       * This page belongs to the I WANT TO LEARN journey.
+       *
+       * It must use the personalized learning roadmap only.
+       *
+       * Backend:
+       * GET /api/personalized-roadmap/learning/me
        */
       const personalizedResponse =
         await getMyPersonalizedRoadmap();
@@ -233,7 +247,7 @@ const LearningRoadmap = () => {
       ) {
         throw new Error(
           personalizedResponse?.message ||
-            "Personalized roadmap is unavailable."
+            "Personalized learning roadmap is unavailable."
         );
       }
 
@@ -243,84 +257,14 @@ const LearningRoadmap = () => {
           personalizedRoadmap.steps
         ),
       });
+    } catch (roadmapError) {
+      console.error(
+        "Failed to load personalized learning roadmap:",
+        roadmapError
+      );
 
-      setRoadmapSource("personalized");
-      return;
-    } catch (personalizedError) {
-      /*
-       * If the personalized roadmap is unavailable,
-       * use the existing career roadmap as a safe
-       * frontend fallback.
-       *
-       * No backend change is made here.
-       */
-      if (
-        personalizedError?.response?.status !== 404
-      ) {
-        console.error(
-          "Failed to load personalized roadmap:",
-          personalizedError
-        );
-      }
-
-      try {
-        const careerGoalResponse =
-          await getMyCareerGoal();
-
-        const careerGoal =
-          careerGoalResponse?.data?.careerGoal;
-
-        const career =
-          careerGoal?.targetCareer;
-
-        const domain =
-          careerGoal?.targetDomain;
-
-        if (!career || !domain) {
-          throw new Error(
-            "Your career goal is not available yet."
-          );
-        }
-
-        const careerRoadmapResponse =
-          await getCareerRoadmap(
-            career,
-            domain
-          );
-
-        const careerRoadmap =
-          careerRoadmapResponse?.data?.roadmap;
-
-        if (
-          !careerRoadmapResponse?.success ||
-          !careerRoadmap
-        ) {
-          throw new Error(
-            careerRoadmapResponse?.message ||
-              "Career roadmap is unavailable."
-          );
-        }
-
-        setRoadmap({
-          ...careerRoadmap,
-          steps: normalizeRoadmapSteps(
-            careerRoadmap.steps
-          ),
-        });
-
-        setRoadmapSource("career");
-      } catch (fallbackError) {
-        console.error(
-          "Failed to load career roadmap:",
-          fallbackError
-        );
-
-        setRoadmap(null);
-
-        setError(
-          getErrorMessage(fallbackError)
-        );
-      }
+      setRoadmap(null);
+      setError(getErrorMessage(roadmapError));
     } finally {
       setIsLoading(false);
       setIsRetrying(false);
@@ -369,11 +313,8 @@ const LearningRoadmap = () => {
     ? roadmap.missingSkills
     : [];
 
-  const careerName =
-    roadmap?.career || "Career path";
-
   const domainName =
-    roadmap?.domain || "Career development";
+    roadmap?.domain || "Your learning goal";
 
   const handleRetry = async () => {
     setIsRetrying(true);
@@ -444,8 +385,8 @@ const LearningRoadmap = () => {
                 text-stone-500
               "
             >
-              Connecting your career goal with your
-              learning path.
+              Connecting your learning goal with your
+              personalized learning path.
             </p>
           </div>
         </motion.div>
@@ -534,7 +475,7 @@ const LearningRoadmap = () => {
               "
             >
               {error ||
-                "We couldn't load your current career roadmap."}
+                "We couldn't load your personalized learning roadmap."}
             </p>
 
             <button
@@ -581,6 +522,34 @@ const LearningRoadmap = () => {
               {isRetrying
                 ? "Trying again..."
                 : "Try again"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/learning-goal")}
+              className="
+                mt-3
+                inline-flex
+                min-h-10
+                items-center
+                justify-center
+                gap-2
+                rounded-md
+                border border-stone-200
+                bg-white
+                px-4
+                text-sm
+                font-semibold
+                text-stone-700
+                transition
+                hover:border-teal-800/20
+                hover:bg-[#f7faf8]
+                focus-visible:outline-2
+                focus-visible:outline-offset-4
+                focus-visible:outline-teal-800
+              "
+            >
+              Change learning goal
             </button>
           </div>
         </motion.section>
@@ -667,15 +636,12 @@ const LearningRoadmap = () => {
                 text-stone-500
               "
             >
-              Your current career direction is{" "}
-              <span className="font-semibold text-stone-700">
-                {careerName}
-              </span>{" "}
-              in{" "}
+              Your selected learning goal is{" "}
               <span className="font-semibold text-stone-700">
                 {domainName}
               </span>
-              .
+              . We do not have any matched learning
+              steps for this goal yet.
             </p>
 
             {missingSkills.length > 0 && (
@@ -736,6 +702,34 @@ const LearningRoadmap = () => {
               />
 
               Refresh roadmap
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/learning-goal")}
+              className="
+                mt-3
+                inline-flex
+                min-h-10
+                items-center
+                justify-center
+                gap-2
+                rounded-md
+                border border-stone-200
+                bg-white
+                px-4
+                text-sm
+                font-semibold
+                text-stone-700
+                transition
+                hover:border-teal-800/20
+                hover:bg-[#f7faf8]
+                focus-visible:outline-2
+                focus-visible:outline-offset-4
+                focus-visible:outline-teal-800
+              "
+            >
+              Change learning goal
             </button>
           </div>
         </motion.section>
@@ -813,8 +807,9 @@ const LearningRoadmap = () => {
               "
             >
               Follow a focused sequence based on
-              your current career direction instead
-              of trying to learn everything at once.
+              your selected learning goal and current
+              profile skills instead of trying to learn
+              everything at once.
             </motion.p>
           </div>
 
@@ -850,9 +845,32 @@ const LearningRoadmap = () => {
             />
 
             <span>
-              {careerName}
+              {domainName}
             </span>
           </motion.div>
+        </div>
+
+        <div className="mt-4 flex justify-start">
+          <button
+            type="button"
+            onClick={() => navigate("/learning-goal")}
+            className="
+              inline-flex min-h-9 items-center gap-2
+              rounded-md border border-stone-200
+              bg-white px-3.5
+              text-xs font-semibold text-stone-600
+              shadow-[0_3px_12px_rgba(28,25,23,0.04)]
+              transition
+              hover:border-teal-800/20
+              hover:bg-[#f7faf8]
+              hover:text-teal-950
+              focus-visible:outline-2
+              focus-visible:outline-offset-4
+              focus-visible:outline-teal-800
+            "
+          >
+            Change learning goal
+          </button>
         </div>
       </motion.section>
 
@@ -877,21 +895,18 @@ const LearningRoadmap = () => {
         <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-300">
-              {roadmapSource === "personalized"
-                ? "Personalized path"
-                : "Career roadmap"}
+              Personalized learning path
             </p>
 
             <h2 className="mt-2 font-['Newsreader'] text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">
-              Build towards {careerName}.
+              Build towards {domainName}.
             </h2>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-300">
-              Your roadmap is connected to the{" "}
-              <span className="font-semibold text-white">
-                {domainName}
-              </span>{" "}
-              career direction.
+              Your roadmap is built from your selected
+              learning goal and current profile skills,
+              so the path stays focused on what you need
+              to learn next.
             </p>
           </div>
 
@@ -1238,7 +1253,8 @@ const LearningRoadmap = () => {
                   }}
                   className="
                     flex size-10
-                    shrink-0 items-center
+                    shrink-0
+                    items-center
                     justify-center rounded-md
                     bg-[#dcefe9]
                     text-teal-950
@@ -1314,7 +1330,8 @@ const LearningRoadmap = () => {
                           <span
                             className="
                               flex size-5
-                              shrink-0 items-center
+                              shrink-0
+                              items-center
                               justify-center rounded-full
                               bg-[#dcefe9]
                               text-teal-950

@@ -20,6 +20,11 @@ const learningRoadmapStepSchema = new mongoose.Schema(
       default: [],
     },
 
+    prerequisites: {
+      type: [String],
+      default: [],
+    },
+
     order: {
       type: Number,
       required: true,

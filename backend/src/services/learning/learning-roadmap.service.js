@@ -20,6 +20,9 @@ const normalizeRoadmapData = (data) => {
       technologies: step.technologies?.map((item) =>
         item.trim().replace(/\s+/g, " ")
       ),
+      prerequisites: step.prerequisites?.map((item) =>
+        item.trim().replace(/\s+/g, " ")
+      ),
     })),
   };
 };
@@ -95,7 +98,11 @@ export const getLearningRoadmap = async (
   domain,
   techStack
 ) => {
-  if (!domain || !Array.isArray(techStack) || !techStack.length) {
+  if (
+    !domain ||
+    !Array.isArray(techStack) ||
+    !techStack.length
+  ) {
     const error = new Error(
       "Domain and tech stack are required."
     );
@@ -106,8 +113,7 @@ export const getLearningRoadmap = async (
 
   const roadmap = await LearningRoadmap.findOne(
     buildRoadmapFilter(domain, techStack)
-  )
-    .lean();
+  ).lean();
 
   if (!roadmap) {
     const error = new Error(

@@ -8,6 +8,7 @@ import {
 } from "../../services/auth.service";
 
 import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
+import { useAuth } from "../../context/AuthContext";
 
 import {
   ArrowRight,
@@ -24,6 +25,7 @@ const pageEase = [0.22, 1, 0.36, 1];
 
 function Signup() {
   const navigate = useNavigate();
+  const { setSession } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -186,17 +188,10 @@ function Signup() {
         );
       }
 
-      localStorage.setItem(
-        "campusx_token",
-        result.data.token
-      );
-
-      if (result.data.user) {
-        localStorage.setItem(
-          "campusx_user",
-          JSON.stringify(result.data.user)
-        );
-      }
+      setSession({
+        token: result.data.token,
+        user: result.data.user,
+      });
 
       navigate("/dashboard", {
         replace: true,

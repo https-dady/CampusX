@@ -1,11 +1,18 @@
 import api from "./api";
 
-export const getOnboarding = async () => {
-  const response = await api.get(
-    "/onboarding/me"
-  );
+let onboardingRequest = null;
 
-  return response.data;
+export const getOnboarding = async () => {
+  if (!onboardingRequest) {
+    onboardingRequest = api
+      .get("/onboarding/me")
+      .then((response) => response.data)
+      .finally(() => {
+        onboardingRequest = null;
+      });
+  }
+
+  return onboardingRequest;
 };
 
 export const analyzeResumeForOnboarding = async (
@@ -52,7 +59,11 @@ export const selectOnboardingJourney =
       "profile_jobs",
     ]);
 
-    if (!allowedJourneyTypes.has(journeyType)) {
+    if (
+      !allowedJourneyTypes.has(
+        journeyType
+      )
+    ) {
       throw new Error(
         "Invalid career journey selected."
       );

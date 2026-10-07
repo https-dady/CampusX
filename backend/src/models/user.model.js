@@ -117,6 +117,7 @@ const educationSchema = new mongoose.Schema(
       min: 1900,
       max: 2200,
     },
+
     academicYear: {
       type: Number,
       min: 1,
@@ -195,6 +196,10 @@ const onboardingSchema = new mongoose.Schema(
     },
 
     profileCompletedAt: {
+      type: Date,
+    },
+
+    resumeAnalyzedAt: {
       type: Date,
     },
 

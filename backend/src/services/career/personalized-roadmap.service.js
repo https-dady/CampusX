@@ -4,18 +4,23 @@ import LearningRoadmap from "../../models/learning-roadmap.model.js";
 const SKILL_ALIASES = {
   js: "javascript",
   "java script": "javascript",
+
   jsx: "react",
   reactjs: "react",
   "react.js": "react",
+
   node: "node.js",
   nodejs: "node.js",
   "node.js": "node.js",
+
   express: "express.js",
   expressjs: "express.js",
   "express.js": "express.js",
+
   mongo: "mongodb",
   "mongo db": "mongodb",
   mongodb: "mongodb",
+
   ml: "machine learning",
   ai: "artificial intelligence",
   ds: "data science",
@@ -34,12 +39,59 @@ const normalizeSkill = (skill) => {
   return SKILL_ALIASES[normalized] || normalized;
 };
 
+const DOMAIN_ALIASES = {
+  cse: "Computer Science and Engineering",
+  "computer science": "Computer Science and Engineering",
+
+  it: "Information Technology",
+
+  ece: "Electronics and Communication Engineering",
+  "electronics and communication":
+    "Electronics and Communication Engineering",
+
+  ee: "Electrical Engineering",
+  "electrical and electronics": "Electrical Engineering",
+
+  me: "Mechanical Engineering",
+  ce: "Civil Engineering",
+
+  "ai/ml": "AI and Machine Learning",
+  "ai & ml": "AI and Machine Learning",
+  "ai and ml": "AI and Machine Learning",
+
+  ml: "Machine Learning",
+  ds: "Data Science",
+
+  "data analytics": "Data Analytics",
+
+  "ai & ds": "Artificial Intelligence and Data Science",
+  "ai and ds": "Artificial Intelligence and Data Science",
+  "ai/data science": "Artificial Intelligence and Data Science",
+
+  "web dev": "Web Development",
+  "full stack development": "Web Development",
+  "full-stack development": "Web Development",
+
+  cybersecurity: "Cyber Security",
+  "cyber security": "Cyber Security",
+};
+
+const normalizeDomain = (domain) => {
+  const normalized = String(domain || "")
+    .trim()
+    .replace(/\s+/g, " ");
+
+  return DOMAIN_ALIASES[normalized.toLowerCase()] || normalized;
+};
+
+const escapeRegex = (value) => {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 const normalizeSkillSet = (skills = []) => {
   return new Set(
     skills
-      .filter(
-        (skill) => typeof skill === "string"
-      )
+      .filter((skill) => typeof skill === "string")
       .map(normalizeSkill)
       .filter(Boolean)
   );
@@ -110,10 +162,10 @@ const getRelevantCareerSteps = (
 
 const getRelevantLearningSteps = (
   steps = [],
-  missingSkills = []
+  requiredSkills = []
 ) => {
-  const missingSkillSet =
-    normalizeSkillSet(missingSkills);
+  const requiredSkillSet =
+    normalizeSkillSet(requiredSkills);
 
   return steps
     .filter((step) => {
@@ -123,7 +175,7 @@ const getRelevantLearningSteps = (
           : [];
 
       return technologies.some((technology) =>
-        missingSkillSet.has(
+        requiredSkillSet.has(
           normalizeSkill(technology)
         )
       );
@@ -134,47 +186,152 @@ const getRelevantLearningSteps = (
     );
 };
 
-const mergeLearningSteps = (roadmaps = []) => {
+const mergeLearningSteps = (steps = []) => {
   const mergedSteps = [];
   const seen = new Set();
 
-  for (const roadmap of roadmaps) {
-    const steps = Array.isArray(roadmap.steps)
-      ? roadmap.steps
-      : [];
-
-    for (const step of steps) {
-      const technologies = Array.isArray(
-        step.technologies
-      )
+  for (const step of steps) {
+    const technologies =
+      Array.isArray(step.technologies)
         ? step.technologies
         : [];
 
-      const normalizedTechnologies =
-        technologies.map(normalizeSkill);
+    const normalizedTechnologies =
+      technologies
+        .map(normalizeSkill)
+        .sort();
 
-      const key = [
-        normalizeSkill(step.title || ""),
-        normalizedTechnologies.join("|"),
-      ].join("::");
+    const key = [
+      normalizeSkill(step.title || ""),
+      normalizedTechnologies.join("|"),
+    ].join("::");
 
-      if (seen.has(key)) {
-        continue;
-      }
-
-      seen.add(key);
-
-      mergedSteps.push({
-        ...step,
-        roadmapId: roadmap._id,
-      });
+    if (seen.has(key)) {
+      continue;
     }
+
+    seen.add(key);
+
+    mergedSteps.push({
+      ...step,
+    });
   }
 
   return mergedSteps.sort(
     (first, second) =>
       first.order - second.order
   );
+};
+
+const buildLearningStepIndex = (steps = []) => {
+  const index = new Map();
+
+  for (const step of steps) {
+    const technologies =
+      Array.isArray(step.technologies)
+        ? step.technologies
+        : [];
+
+    for (const technology of technologies) {
+      const normalized =
+        normalizeSkill(technology);
+
+      if (normalized && !index.has(normalized)) {
+        index.set(normalized, step);
+      }
+    }
+  }
+
+  return index;
+};
+
+const collectLearningDependencies = ({
+  targetSkills,
+  userSkills,
+  steps,
+}) => {
+  const userSkillSet =
+    normalizeSkillSet(userSkills);
+
+  const stepIndex =
+    buildLearningStepIndex(steps);
+
+  const requiredSkillSet = new Set();
+  const visiting = new Set();
+
+  const visitSkill = (skill) => {
+    const normalizedSkill =
+      normalizeSkill(skill);
+
+    if (
+      !normalizedSkill ||
+      userSkillSet.has(normalizedSkill)
+    ) {
+      return;
+    }
+
+    if (requiredSkillSet.has(normalizedSkill)) {
+      return;
+    }
+
+    if (visiting.has(normalizedSkill)) {
+      return;
+    }
+
+    visiting.add(normalizedSkill);
+
+    const step =
+      stepIndex.get(normalizedSkill);
+
+    if (step) {
+      const prerequisites =
+        Array.isArray(step.prerequisites)
+          ? step.prerequisites
+          : [];
+
+      for (const prerequisite of prerequisites) {
+        visitSkill(prerequisite);
+      }
+    }
+
+    visiting.delete(normalizedSkill);
+
+    requiredSkillSet.add(normalizedSkill);
+  };
+
+  for (const targetSkill of targetSkills) {
+    visitSkill(targetSkill);
+  }
+
+  return requiredSkillSet;
+};
+
+const getRoadmapSkillsFromSteps = (
+  steps = []
+) => {
+  const skills = [];
+  const seen = new Set();
+
+  for (const step of steps) {
+    const technologies =
+      Array.isArray(step.technologies)
+        ? step.technologies
+        : [];
+
+    for (const technology of technologies) {
+      const normalized =
+        normalizeSkill(technology);
+
+      if (!normalized || seen.has(normalized)) {
+        continue;
+      }
+
+      seen.add(normalized);
+      skills.push(technology);
+    }
+  }
+
+  return skills;
 };
 
 export const generatePersonalizedRoadmap =
@@ -257,10 +414,12 @@ export const generatePersonalizedLearningRoadmap =
       getDisplaySkills(userSkills);
 
     const userSkillSet =
-      normalizeSkillSet(normalizedUserSkills);
+      normalizeSkillSet(
+        normalizedUserSkills
+      );
 
     const matchedSkills = [];
-    const missingSkills = [];
+    const missingTargetSkills = [];
 
     for (const targetSkill of normalizedTargetSkills) {
       const normalizedTargetSkill =
@@ -273,7 +432,9 @@ export const generatePersonalizedLearningRoadmap =
       ) {
         matchedSkills.push(targetSkill);
       } else {
-        missingSkills.push(targetSkill);
+        missingTargetSkills.push(
+          targetSkill
+        );
       }
     }
 
@@ -283,17 +444,16 @@ export const generatePersonalizedLearningRoadmap =
         normalizedTargetSkills.length
       );
 
-    const normalizedDomain = domain
-      .trim()
-      .replace(/\s+/g, " ");
+    const normalizedDomain =
+      normalizeDomain(domain);
+
+    const escapedDomain =
+      escapeRegex(normalizedDomain);
 
     const learningRoadmaps =
       await LearningRoadmap.find({
         domain: {
-          $regex: `^${normalizedDomain.replace(
-            /[.*+?^${}()|[\]\\]/g,
-            "\\$&"
-          )}$`,
+          $regex: `^${escapedDomain}$`,
           $options: "i",
         },
         isActive: true,
@@ -312,100 +472,57 @@ export const generatePersonalizedLearningRoadmap =
       throw error;
     }
 
-    const missingSkillSet =
-      normalizeSkillSet(missingSkills);
+    /*
+     * IMPORTANT:
+     * Attach roadmapId to every step before
+     * dependency calculation and filtering.
+     *
+     * The previous implementation lost this
+     * relationship, which caused every step to
+     * be filtered out later.
+     */
+    const allSteps =
+      learningRoadmaps.flatMap(
+        (roadmap) =>
+          Array.isArray(roadmap.steps)
+            ? roadmap.steps.map((step) => ({
+                ...step,
+                roadmapId: roadmap._id,
+              }))
+            : []
+      );
 
-    const relevantRoadmaps =
-      learningRoadmaps
-        .map((roadmap) => {
-          const roadmapTechStack =
-            Array.isArray(
-              roadmap.techStack
-            )
-              ? roadmap.techStack
-              : [];
+    const requiredSkillSet =
+      collectLearningDependencies({
+        targetSkills:
+          normalizedTargetSkills,
+        userSkills:
+          normalizedUserSkills,
+        steps: allSteps,
+      });
 
-          const matchingTechStack =
-            roadmapTechStack.filter(
-              (technology) =>
-                missingSkillSet.has(
-                  normalizeSkill(technology)
-                )
-            );
-
-          const relevantSteps =
-            getRelevantLearningSteps(
-              roadmap.steps,
-              missingSkills
-            );
-
-          return {
-            roadmap,
-            matchingTechStack,
-            relevantSteps,
-          };
-        })
-        .filter(
-          ({
-            matchingTechStack,
-            relevantSteps,
-          }) =>
-            matchingTechStack.length > 0 ||
-            relevantSteps.length > 0
-        )
-        .sort(
-          (first, second) =>
-            second.matchingTechStack.length -
-            first.matchingTechStack.length
-        );
-
-    const selectedRoadmaps =
-      relevantRoadmaps.length > 0
-        ? relevantRoadmaps
-        : learningRoadmaps.map(
-            (roadmap) => ({
-              roadmap,
-              matchingTechStack: [],
-              relevantSteps: [],
-            })
-          );
+    const relevantSteps =
+      getRelevantLearningSteps(
+        allSteps,
+        [...requiredSkillSet]
+      );
 
     const personalizedSteps =
       mergeLearningSteps(
-        selectedRoadmaps.map(
-          ({ roadmap, relevantSteps }) => ({
-            ...roadmap,
-            steps: relevantSteps,
-          })
-        )
+        relevantSteps
       );
 
-    const roadmapSkills = [];
+    const roadmapSkills =
+      getRoadmapSkillsFromSteps(
+        personalizedSteps
+      );
 
-    for (const step of personalizedSteps) {
-      const technologies =
-        Array.isArray(step.technologies)
-          ? step.technologies
-          : [];
-
-      for (const technology of technologies) {
-        if (
-          !roadmapSkills.some(
-            (existingSkill) =>
-              normalizeSkill(
-                existingSkill
-              ) ===
-              normalizeSkill(
-                technology
-              )
-          )
-        ) {
-          roadmapSkills.push(
-            technology
-          );
-        }
-      }
-    }
+    const missingSkills =
+      roadmapSkills.filter((skill) => {
+        return !userSkillSet.has(
+          normalizeSkill(skill)
+        );
+      });
 
     return {
       domain: normalizedDomain,
@@ -415,6 +532,7 @@ export const generatePersonalizedLearningRoadmap =
         normalizedUserSkills,
       matchedSkills,
       missingSkills,
+      missingTargetSkills,
       matchPercentage,
       roadmapSkills,
       steps: personalizedSteps,
