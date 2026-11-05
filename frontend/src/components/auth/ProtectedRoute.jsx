@@ -6,7 +6,6 @@ import {
 
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
@@ -91,6 +90,7 @@ const ProtectedRoute = ({
         );
 
         setOnboardingState(null);
+
         setOnboardingError(
           error?.response?.data?.message ||
             error?.message ||
@@ -114,6 +114,9 @@ const ProtectedRoute = ({
   const isOnboardingRoute =
     location.pathname === "/onboarding";
 
+  const isLearningGoalRoute =
+    location.pathname === "/learning-goal";
+
   const status =
     onboardingState?.onboarding?.status ||
     null;
@@ -124,41 +127,6 @@ const ProtectedRoute = ({
 
   const journeyDestination =
     getJourneyDestination(journeyType);
-
-  const isJourneyRoute =
-    location.pathname === "/learning-goal" ||
-    location.pathname === "/dream-job" ||
-    location.pathname === "/jobs/profile" ||
-    location.pathname === "/learning-roadmap" ||
-    location.pathname === "/courses-resources";
-
-  const journeyRouteAllowed = useMemo(() => {
-    if (!isJourneyRoute) {
-      return true;
-    }
-
-    if (journeyType === "learn") {
-      return (
-        location.pathname === "/learning-goal" ||
-        location.pathname === "/learning-roadmap" ||
-        location.pathname === "/courses-resources"
-      );
-    }
-
-    if (journeyType === "dream_job") {
-      return location.pathname === "/dream-job";
-    }
-
-    if (journeyType === "profile_jobs") {
-      return location.pathname === "/jobs/profile";
-    }
-
-    return false;
-  }, [
-    isJourneyRoute,
-    journeyType,
-    location.pathname,
-  ]);
 
   if (isInitializing) {
     return (
@@ -263,10 +231,19 @@ const ProtectedRoute = ({
     );
   }
 
+  /*
+   * Learning Goal is an initial learning setup page.
+   * It should only be accessible to users who selected
+   * the learning journey.
+   *
+   * Learning Roadmap and Courses & Resources are
+   * general workspace features. They must remain
+   * accessible regardless of the selected journey.
+   */
   if (
     status === "journey_selected" &&
-    isJourneyRoute &&
-    !journeyRouteAllowed
+    isLearningGoalRoute &&
+    journeyType !== "learn"
   ) {
     return (
       <Navigate
