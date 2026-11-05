@@ -458,13 +458,32 @@ export const selectOnboardingJourney =
     const onboarding =
       user.onboarding || {};
 
+    /*
+     * Initial journey selection requires career analysis.
+     * Existing users who already selected a journey can
+     * change it without repeating resume onboarding.
+     */
+    const canSelectJourney =
+      onboarding.status ===
+        "career_analyzed" &&
+      Boolean(
+        onboarding.careerAnalyzedAt
+      );
+
+    const canChangeJourney =
+      onboarding.status ===
+        "journey_selected" &&
+      Boolean(
+        onboarding.careerAnalyzedAt
+      );
+
     if (
-      onboarding.status !==
-      "career_analyzed"
+      !canSelectJourney &&
+      !canChangeJourney
     ) {
       const error =
         new Error(
-          "Complete career analysis before selecting a career journey."
+          "Complete career analysis before selecting or changing your career journey."
         );
 
       error.statusCode = 400;
@@ -486,10 +505,22 @@ export const selectOnboardingJourney =
         },
         {
           new: true,
+          runValidators: true,
           projection:
             "_id profile onboarding",
         }
       ).lean();
+
+    if (!updatedUser) {
+      const error =
+        new Error(
+          "Unable to update your career journey."
+        );
+
+      error.statusCode = 500;
+
+      throw error;
+    }
 
     return {
       onboarding:
