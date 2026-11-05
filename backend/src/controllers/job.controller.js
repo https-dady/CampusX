@@ -4,7 +4,10 @@ import {
 } from "../services/job/job.service.js";
 
 export const searchJobsController =
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     try {
       const result =
         await searchJobs(
@@ -18,36 +21,41 @@ export const searchJobsController =
           "Jobs fetched successfully.",
 
         data: {
-          jobs: result.jobs,
+          jobs:
+            result.jobs,
 
           total:
             result.total,
 
           hasMore:
-            result.hasMore === true,
+            result.hasMore ===
+            true,
 
           cacheKey:
             result.cacheKey,
         },
       });
     } catch (error) {
-      const statusCode =
-        error.statusCode || 500;
+      return res
+        .status(
+          error.statusCode ||
+            500
+        )
+        .json({
+          success: false,
 
-      return res.status(
-        statusCode
-      ).json({
-        success: false,
-
-        message:
-          error.message ||
-          "Unable to fetch jobs.",
-      });
+          message:
+            error.message ||
+            "Unable to fetch jobs.",
+        });
     }
   };
 
 export const searchProfileJobsController =
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     try {
       const result =
         await searchJobsBasedOnProfile(
@@ -61,17 +69,24 @@ export const searchProfileJobsController =
           "Profile-based jobs fetched successfully.",
 
         data: {
-          jobs: result.jobs,
+          jobs:
+            result.jobs,
 
           total:
             result.total,
 
           hasMore:
-            result.hasMore === true,
+            result.hasMore ===
+            true,
 
           cacheKey:
             result.cacheKey,
 
+          /*
+           * This is the role predicted by the
+           * existing ML model and subsequently
+           * used as targetRole for job search.
+           */
           targetRole:
             result.targetRole,
 
@@ -80,17 +95,17 @@ export const searchProfileJobsController =
         },
       });
     } catch (error) {
-      const statusCode =
-        error.statusCode || 500;
+      return res
+        .status(
+          error.statusCode ||
+            500
+        )
+        .json({
+          success: false,
 
-      return res.status(
-        statusCode
-      ).json({
-        success: false,
-
-        message:
-          error.message ||
-          "Unable to fetch jobs based on your profile.",
-      });
+          message:
+            error.message ||
+            "Unable to fetch jobs based on your profile.",
+        });
     }
   };

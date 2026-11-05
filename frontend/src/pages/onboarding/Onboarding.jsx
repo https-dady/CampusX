@@ -563,7 +563,7 @@ const Onboarding = () => {
             ? "/learning-goal"
             : journeyType === "dream_job"
               ? "/dream-job"
-              : "/jobs/profile";
+              : "/jobs?source=profile";
 
         navigate(destination, {
           replace: true,
@@ -737,8 +737,11 @@ const Onboarding = () => {
             </section>
           )}
 
-          <div className="grid gap-5 lg:grid-cols-3">
-            {JOURNEYS.map(
+          <div className="space-y-6">
+            {/* I WANT TO LEARN */}
+            {JOURNEYS.filter(
+              (journey) => journey.id === "learn"
+            ).map(
               ({
                 id,
                 title,
@@ -749,38 +752,42 @@ const Onboarding = () => {
                 <button
                   key={id}
                   type="button"
-                  disabled={
-                    selectingJourney
-                  }
+                  disabled={selectingJourney}
                   onClick={() =>
-                    handleJourneySelect(
-                      id
-                    )
+                    handleJourneySelect(id)
                   }
-                  className="group flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-6 text-left shadow-[0_14px_45px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_18px_50px_rgba(28,25,23,0.09)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="group flex w-full flex-col rounded-2xl border border-stone-200 bg-white p-6 text-left shadow-[0_14px_45px_rgba(28,25,23,0.05)] transition duration-200 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_18px_50px_rgba(28,25,23,0.09)] disabled:cursor-not-allowed disabled:opacity-60 sm:p-7"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${accent}`}
-                    >
-                      <Icon size={22} />
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${accent}`}
+                      >
+                        <Icon size={22} />
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-800">
+                          Learning path
+                        </p>
+
+                        <h2 className="mt-1 text-base font-bold tracking-wide text-stone-900">
+                          {title}
+                        </h2>
+
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-500">
+                          {description}
+                        </p>
+                      </div>
                     </div>
 
                     <ArrowRight
                       size={19}
-                      className="mt-1 text-stone-300 transition group-hover:translate-x-1 group-hover:text-teal-800"
+                      className="mt-1 shrink-0 text-stone-300 transition group-hover:translate-x-1 group-hover:text-teal-800"
                     />
                   </div>
 
-                  <h2 className="mt-6 text-base font-bold tracking-wide text-stone-900">
-                    {title}
-                  </h2>
-
-                  <p className="mt-3 flex-1 text-sm leading-6 text-stone-500">
-                    {description}
-                  </p>
-
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-teal-950">
+                  <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-teal-950">
                     {selectingJourney ? (
                       <>
                         <Loader2
@@ -791,7 +798,7 @@ const Onboarding = () => {
                       </>
                     ) : (
                       <>
-                        Select journey
+                        Start learning journey
                         <ArrowRight size={15} />
                       </>
                     )}
@@ -799,6 +806,105 @@ const Onboarding = () => {
                 </button>
               )
             )}
+
+            {/* JOBS SECTION */}
+            <section
+              aria-labelledby="jobs-journey-title"
+              className="rounded-2xl border border-stone-200 bg-[#f7faf8] p-5 shadow-[0_14px_45px_rgba(28,25,23,0.04)] sm:p-6"
+            >
+              <div className="mb-5 flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-800">
+                  <BriefcaseBusiness size={20} />
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-800">
+                    Jobs
+                  </p>
+
+                  <h2
+                    id="jobs-journey-title"
+                    className="mt-1 text-xl font-semibold tracking-[-0.02em] text-stone-900"
+                  >
+                    Choose how you want to find opportunities.
+                  </h2>
+
+                  <p className="mt-1 text-sm leading-6 text-stone-500">
+                    Both paths use the existing external job architecture. Pick the one that matches your goal.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {JOURNEYS.filter(
+                  (journey) =>
+                    journey.id === "dream_job" ||
+                    journey.id === "profile_jobs"
+                ).map(
+                  ({
+                    id,
+                    title,
+                    description,
+                    icon: Icon,
+                    accent,
+                  }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      disabled={selectingJourney}
+                      onClick={() =>
+                        handleJourneySelect(id)
+                      }
+                      className="group flex h-full flex-col rounded-2xl border border-stone-200 bg-white p-6 text-left shadow-[0_10px_32px_rgba(28,25,23,0.04)] transition duration-200 hover:-translate-y-1 hover:border-teal-300 hover:shadow-[0_16px_40px_rgba(28,25,23,0.08)] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div
+                          className={`flex h-12 w-12 items-center justify-center rounded-xl ${accent}`}
+                        >
+                          <Icon size={22} />
+                        </div>
+
+                        <ArrowRight
+                          size={19}
+                          className="mt-1 text-stone-300 transition group-hover:translate-x-1 group-hover:text-teal-800"
+                        />
+                      </div>
+
+                      <h3 className="mt-6 text-base font-bold tracking-wide text-stone-900">
+                        {id === "profile_jobs"
+                          ? "JOBS BASED ON MY PROFILE"
+                          : "MY DREAM JOB"}
+                      </h3>
+
+                      <p className="mt-3 flex-1 text-sm leading-6 text-stone-500">
+                        {id === "profile_jobs"
+                          ? "Use the technical skills already saved in your profile. CampusX predicts the best-fit role and then fetches relevant external jobs."
+                          : "Enter the role you want to target. CampusX compares your profile skills with the role requirements, identifies skill gaps, and continues into the dream-job roadmap and resources."}
+                      </p>
+
+                      <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-teal-950">
+                        {selectingJourney ? (
+                          <>
+                            <Loader2
+                              size={15}
+                              className="animate-spin"
+                            />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            {id === "profile_jobs"
+                              ? "Find jobs from my profile"
+                              : "Build my dream-job path"}
+                            <ArrowRight size={15} />
+                          </>
+                        )}
+                      </span>
+                    </button>
+                  )
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </main>

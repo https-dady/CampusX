@@ -16,6 +16,13 @@ import {
 const router =
   express.Router();
 
+/*
+ * Normal / Dream Job job search
+ *
+ * POST /api/jobs/search
+ *
+ * Dream Job passes the selected target role.
+ */
 router.post(
   "/search",
   authMiddleware,
@@ -26,11 +33,23 @@ router.post(
 );
 
 /*
- * Profile-based job search.
+ * Jobs based on current profile
  *
- * No targetRole is accepted from the frontend.
- * The backend derives the role from the user's
- * existing profile through the existing ML pipeline.
+ * GET /api/jobs/profile
+ *
+ * No targetRole comes from frontend.
+ *
+ * Backend derives:
+ *
+ * Profile
+ *   ↓
+ * Existing ML Career Prediction
+ *   ↓
+ * Primary Career
+ *   ↓
+ * Existing searchJobs()
+ *   ↓
+ * n8n + TinyFish
  */
 router.get(
   "/profile",

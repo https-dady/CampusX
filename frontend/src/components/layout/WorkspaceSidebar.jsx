@@ -2,6 +2,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   BookOpen,
+  BriefcaseBusiness,
   ClipboardCheck,
   FileSearch,
   LayoutDashboard,
@@ -53,6 +54,11 @@ const navigation = [
     label: "Courses & resources",
     to: "/courses-resources",
     icon: BookOpen,
+  },
+  {
+    label: "Jobs",
+    to: "/jobs",
+    icon: BriefcaseBusiness,
   },
   {
     label: "Resume analysis",
@@ -155,7 +161,7 @@ const WorkspaceSidebar = ({
         </div>
 
         <nav
-          className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+          className="min-h-0 flex-1 overflow-y-auto scrollbar-hide px-3 py-4"
           aria-label="Workspace"
         >
           <ul className="space-y-1">

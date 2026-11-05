@@ -5,12 +5,20 @@ const normalizeText = (value) => {
 };
 
 const textSchema = (fieldName, max) =>
- z
+  z
     .string()
     .trim()
     .min(1, `${fieldName} is required`)
     .max(max, `${fieldName} is too long`)
     .transform(normalizeText);
+
+const optionalTextSchema = (fieldName, max) =>
+  z
+    .string()
+    .trim()
+    .max(max, `${fieldName} is too long`)
+    .transform(normalizeText)
+    .optional();
 
 const jobSchema = z
   .object({
@@ -18,17 +26,17 @@ const jobSchema = z
 
     company: textSchema("Company", 150),
 
-    location: textSchema("Location", 150).optional(),
+    location: optionalTextSchema("Location", 150),
 
-    employmentType: textSchema(
+    employmentType: optionalTextSchema(
       "Employment type",
       100
-    ).optional(),
+    ),
 
-    experienceLevel: textSchema(
+    experienceLevel: optionalTextSchema(
       "Experience level",
       100
-    ).optional(),
+    ),
 
     description: z
       .string()

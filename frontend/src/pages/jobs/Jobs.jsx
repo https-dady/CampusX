@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   BriefcaseBusiness,
   Building2,
@@ -630,6 +630,7 @@ const JobCard = ({
 
 const Jobs = () => {
   const prefersReducedMotion = useReducedMotion();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [role, setRole] = useState("");
@@ -1038,24 +1039,30 @@ const Jobs = () => {
                   : 0.25,
               ease: pageEase,
             }}
-            className="
-              inline-flex w-fit
-              items-center gap-2
-              rounded-full
-              border border-stone-200
-              bg-white
-              px-3 py-2
-              text-xs font-medium
-              text-stone-500
-            "
+            className="flex flex-wrap items-center gap-2"
           >
-            <BriefcaseBusiness
-              size={14}
-              className="text-teal-800"
-              aria-hidden="true"
-            />
+            <button
+              type="button"
+              onClick={() =>
+                navigate("/jobs?source=profile")
+              }
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-teal-950 bg-white px-4 text-xs font-semibold text-teal-950 transition-colors duration-200 hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-teal-800"
+            >
+              <Sparkles
+                size={14}
+                aria-hidden="true"
+              />
+              Jobs based on my profile
+            </button>
 
-            Live opportunity search
+            <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-500">
+              <BriefcaseBusiness
+                size={14}
+                className="text-teal-800"
+                aria-hidden="true"
+              />
+              Live opportunity search
+            </div>
           </motion.div>
         </div>
       </motion.section>

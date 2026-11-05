@@ -310,7 +310,7 @@ const Overview = () => {
 
   const nextStepHref =
     journeyType === "profile_jobs"
-      ? "/jobs/profile"
+      ? "/jobs?source=profile"
       : getJourneyDestination(
           journeyType
         );

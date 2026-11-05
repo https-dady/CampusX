@@ -18,16 +18,23 @@ import {
 
 const REQUEST_TIMEOUT_MS = 15000;
 
-const buildJobSearchRequest = (jobData) => {
+const buildJobSearchRequest = (
+  jobData
+) => {
   return {
-    targetRole: jobData.targetRole,
+    targetRole:
+      jobData.targetRole,
+
     ...(jobData.location && {
-      location: jobData.location,
+      location:
+        jobData.location,
     }),
+
     ...(jobData.experienceLevel && {
       experienceLevel:
         jobData.experienceLevel,
     }),
+
     ...(jobData.employmentType && {
       employmentType:
         jobData.employmentType,
@@ -49,9 +56,16 @@ export const prepareJobSearchRequest = (
   }
 
   const request =
-    buildJobSearchRequest(jobData);
+    buildJobSearchRequest(
+      jobData
+    );
 
-  if (!request.targetRole) {
+  if (
+    !request.targetRole ||
+    typeof request.targetRole !==
+      "string" ||
+    !request.targetRole.trim()
+  ) {
     const error = new Error(
       "Target role is required."
     );
@@ -61,6 +75,10 @@ export const prepareJobSearchRequest = (
     throw error;
   }
 
+  request.targetRole =
+    request.targetRole
+      .trim();
+
   return request;
 };
 
@@ -68,9 +86,13 @@ export const searchJobs = async (
   jobData
 ) => {
   const request =
-    prepareJobSearchRequest(jobData);
+    prepareJobSearchRequest(
+      jobData
+    );
 
-  if (!env.N8N_JOB_WEBHOOK_URL) {
+  if (
+    !env.N8N_JOB_WEBHOOK_URL
+  ) {
     const error = new Error(
       "Job search workflow URL is not configured."
     );
@@ -83,12 +105,12 @@ export const searchJobs = async (
   const controller =
     new AbortController();
 
-  const timeout = setTimeout(
-    () => {
-      controller.abort();
-    },
-    REQUEST_TIMEOUT_MS
-  );
+  const timeout =
+    setTimeout(
+      () =>
+        controller.abort(),
+      REQUEST_TIMEOUT_MS
+    );
 
   try {
     const response =
@@ -155,7 +177,7 @@ export const searchJobs = async (
     return result.data;
   } catch (error) {
     if (
-      error.name ===
+      error?.name ===
       "AbortError"
     ) {
       const timeoutError =
@@ -169,36 +191,52 @@ export const searchJobs = async (
       throw timeoutError;
     }
 
-    if (!error.statusCode) {
-      const networkError =
-        new Error(
-          "Unable to connect to job search workflow."
-        );
-
-      networkError.statusCode =
-        502;
-
-      throw networkError;
+    if (
+      error?.statusCode
+    ) {
+      throw error;
     }
 
-    throw error;
+    const networkError =
+      new Error(
+        "Unable to connect to job search workflow."
+      );
+
+    networkError.statusCode =
+      502;
+
+    networkError.cause =
+      error;
+
+    throw networkError;
   } finally {
     clearTimeout(timeout);
   }
 };
 
-/**
- * Uses the user's existing profile as the source of truth,
- * runs the existing ML career prediction pipeline directly,
- * and converts the primary predicted career into the
- * targetRole required by the existing job-search workflow.
+/*
+ * Profile-based job journey
  *
  * IMPORTANT:
- * This intentionally does NOT call /api/career/predict.
- * That controller changes onboarding.status to career_analyzed.
+ * Technical skills are NOT passed directly as targetRole.
  *
- * Profile-based job search is a read/search operation and
- * must not mutate the user's onboarding lifecycle.
+ * Flow:
+ *
+ * User Profile
+ *      ↓
+ * Existing Career Prediction ML
+ *      ↓
+ * analyzeCareerPrediction()
+ *      ↓
+ * Primary predicted career
+ *      ↓
+ * Existing searchJobs()
+ *      ↓
+ * Existing n8n + TinyFish workflow
+ *
+ * This method deliberately does NOT call the
+ * /api/career/predict controller because that controller
+ * mutates onboarding state.
  */
 export const searchJobsBasedOnProfile =
   async (userId) => {
@@ -212,12 +250,15 @@ export const searchJobsBasedOnProfile =
       throw error;
     }
 
-    const user =
+    const userProfile =
       await getMyProfile(
         userId
       );
 
-    if (!user?.profile) {
+    const profile =
+      userProfile?.profile;
+
+    if (!profile) {
       const error = new Error(
         "Your profile is not available."
       );
@@ -227,9 +268,39 @@ export const searchJobsBasedOnProfile =
       throw error;
     }
 
+    const technicalSkills =
+      Array.isArray(
+        profile.technicalSkills
+      )
+        ? profile.technicalSkills.filter(
+            (skill) =>
+              typeof skill ===
+                "string" &&
+              skill.trim()
+          )
+        : [];
+
+    if (
+      technicalSkills.length ===
+      0
+    ) {
+      const error = new Error(
+        "No technical skills are available in your profile for career prediction."
+      );
+
+      error.statusCode = 422;
+
+      throw error;
+    }
+
+    /*
+     * Reuse the existing ML service directly.
+     * Do not call /api/career/predict here because that
+     * endpoint also changes onboarding.status.
+     */
     const prediction =
       await getCareerPrediction(
-        user.profile
+        profile
       );
 
     const analysis =
@@ -264,6 +335,7 @@ export const searchJobsBasedOnProfile =
       prediction: {
         primaryCareer:
           analysis.primaryCareer,
+
         predictions:
           analysis.predictions,
       },
