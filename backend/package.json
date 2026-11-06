@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "seed:communities": "node src/scripts/seed-communities.js"
+    "seed:communities": "node src/scripts/seed-communities.js",
+    "seed:career-requirements": "node src/scripts/seed-career-requirements.js"
   },
   "keywords": [],
   "author": "",
