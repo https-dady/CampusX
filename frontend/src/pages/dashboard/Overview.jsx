@@ -17,7 +17,6 @@ import { getMyProfile } from "../../services/profile.service";
 import {
   getMyCareerGoal,
   getMyPersonalizedLearningRoadmap,
-  getMyPersonalizedRoadmap,
 } from "../../services/learning.service";
 
 const getJourneyDestination = (journeyType) => {
@@ -113,7 +112,7 @@ const Overview = () => {
           skillGapResult.reason?.response?.status === 404
             ? "Skill-gap data is not available for the current target yet."
             : skillGapResult.reason?.response?.data?.message ||
-                "Skill-gap data could not be refreshed right now."
+            "Skill-gap data could not be refreshed right now."
         );
       }
 
@@ -139,7 +138,7 @@ const Overview = () => {
       } else if (journeyType === "dream_job") {
         const [roadmapResult, goalResult] =
           await Promise.allSettled([
-            getMyPersonalizedRoadmap(),
+            getMyPersonalizedLearningRoadmap(),
             getMyCareerGoal(),
           ]);
 
@@ -246,10 +245,10 @@ const Overview = () => {
 
   const matchPercentage =
     typeof roadmap?.matchPercentage ===
-    "number"
+      "number"
       ? roadmap.matchPercentage
       : typeof skillGap?.matchPercentage ===
-          "number"
+        "number"
         ? skillGap.matchPercentage
         : null;
 
@@ -259,8 +258,8 @@ const Overview = () => {
     )
       ? roadmap.missingSkills
       : Array.isArray(
-          skillGap?.missingSkills
-        )
+        skillGap?.missingSkills
+      )
         ? skillGap.missingSkills
         : [];
 
@@ -272,11 +271,11 @@ const Overview = () => {
   const goalLabel =
     journeyType === "learn"
       ? roadmap?.domain ||
-        "Your learning target"
+      "Your learning target"
       : journeyType === "dream_job"
         ? careerGoal?.targetCareer ||
-          roadmap?.career ||
-          "Your target career"
+        roadmap?.career ||
+        "Your target career"
         : journeyType === "profile_jobs"
           ? "Jobs matched to your skills"
           : "Your next career step";
@@ -312,8 +311,8 @@ const Overview = () => {
     journeyType === "profile_jobs"
       ? "/jobs?source=profile"
       : getJourneyDestination(
-          journeyType
-        );
+        journeyType
+      );
 
   const readinessValue =
     matchPercentage !== null
@@ -352,8 +351,8 @@ const Overview = () => {
         roadmapSteps.length
           ? `${roadmapSteps.length === 1 ? "step" : "steps"} in your current plan`
           : getJourneyLabel(
-              journeyType
-            ),
+            journeyType
+          ),
       icon: Map,
     },
     {
@@ -506,13 +505,13 @@ const Overview = () => {
     hidden:
       prefersReducedMotion
         ? {
-            opacity: 1,
-            y: 0,
-          }
+          opacity: 1,
+          y: 0,
+        }
         : {
-            opacity: 0,
-            y: 18,
-          },
+          opacity: 0,
+          y: 18,
+        },
 
     visible: {
       opacity: 1,
@@ -604,9 +603,9 @@ const Overview = () => {
             prefersReducedMotion
               ? false
               : {
-                  opacity: 0,
-                  y: 10,
-                }
+                opacity: 0,
+                y: 10,
+              }
           }
           animate={{
             opacity: 1,
@@ -664,13 +663,13 @@ const Overview = () => {
                 initial={
                   prefersReducedMotion
                     ? {
-                        opacity: 1,
-                        y: 0,
-                      }
+                      opacity: 1,
+                      y: 0,
+                    }
                     : {
-                        opacity: 0,
-                        y: 22,
-                      }
+                      opacity: 0,
+                      y: 22,
+                    }
                 }
                 animate={{
                   opacity: 1,
@@ -685,7 +684,7 @@ const Overview = () => {
                     prefersReducedMotion
                       ? 0
                       : 0.25 +
-                        index * 0.08,
+                      index * 0.08,
                   ease: [
                     0.22,
                     1,
@@ -786,13 +785,13 @@ const Overview = () => {
                       initial={
                         prefersReducedMotion
                           ? {
-                              width:
-                                "68%",
-                            }
+                            width:
+                              "68%",
+                          }
                           : {
-                              width:
-                                "0%",
-                            }
+                            width:
+                              "0%",
+                          }
                       }
                       animate={{
                         width: "68%",
@@ -828,13 +827,13 @@ const Overview = () => {
           initial={
             prefersReducedMotion
               ? {
-                  opacity: 1,
-                  y: 0,
-                }
+                opacity: 1,
+                y: 0,
+              }
               : {
-                  opacity: 0,
-                  y: 22,
-                }
+                opacity: 0,
+                y: 22,
+              }
           }
           animate={{
             opacity: 1,
@@ -900,12 +899,12 @@ const Overview = () => {
                 prefersReducedMotion
                   ? undefined
                   : {
-                      y: [
-                        0,
-                        -2,
-                        0,
-                      ],
-                    }
+                    y: [
+                      0,
+                      -2,
+                      0,
+                    ],
+                  }
               }
               transition={{
                 duration: 3.5,
@@ -939,13 +938,13 @@ const Overview = () => {
           initial={
             prefersReducedMotion
               ? {
-                  opacity: 1,
-                  y: 0,
-                }
+                opacity: 1,
+                y: 0,
+              }
               : {
-                  opacity: 0,
-                  y: 22,
-                }
+                opacity: 0,
+                y: 22,
+              }
           }
           animate={{
             opacity: 1,
@@ -996,13 +995,13 @@ const Overview = () => {
           initial={
             prefersReducedMotion
               ? {
-                  opacity: 1,
-                  y: 0,
-                }
+                opacity: 1,
+                y: 0,
+              }
               : {
-                  opacity: 0,
-                  y: 22,
-                }
+                opacity: 0,
+                y: 22,
+              }
           }
           animate={{
             opacity: 1,
@@ -1052,7 +1051,7 @@ const Overview = () => {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
                 {journeyType ===
-                "profile_jobs"
+                  "profile_jobs"
                   ? "Profile skills"
                   : "Learning roadmap"}
               </p>
@@ -1065,7 +1064,7 @@ const Overview = () => {
             <Link
               to={
                 journeyType ===
-                "profile_jobs"
+                  "profile_jobs"
                   ? "/jobs/profile"
                   : "/learning-roadmap"
               }
@@ -1083,7 +1082,7 @@ const Overview = () => {
           </div>
 
           {roadmapSteps.length >
-          0 ? (
+            0 ? (
             <ol className="relative z-10 mt-7 space-y-5">
               {roadmapSteps
                 .slice(0, 3)
@@ -1101,13 +1100,13 @@ const Overview = () => {
                       initial={
                         prefersReducedMotion
                           ? {
-                              opacity: 1,
-                              x: 0,
-                            }
+                            opacity: 1,
+                            x: 0,
+                          }
                           : {
-                              opacity: 0,
-                              x: -12,
-                            }
+                            opacity: 0,
+                            x: -12,
+                          }
                       }
                       animate={{
                         opacity: 1,
@@ -1122,8 +1121,8 @@ const Overview = () => {
                           prefersReducedMotion
                             ? 0
                             : 1 +
-                              index *
-                                0.1,
+                            index *
+                            0.1,
                       }}
                       className="flex items-start gap-3"
                     >
@@ -1134,8 +1133,7 @@ const Overview = () => {
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-[#10231f]">
                           {step.title ||
-                            `Step ${
-                              index + 1
+                            `Step ${index + 1
                             }`}
                         </p>
 
@@ -1152,14 +1150,14 @@ const Overview = () => {
             <div className="relative z-10 mt-7 rounded-md bg-[#f2eee5] p-5">
               <p className="text-sm font-semibold text-[#10231f]">
                 {journeyType ===
-                "profile_jobs"
+                  "profile_jobs"
                   ? "Your profile skills are ready for job discovery."
                   : "Your roadmap is not available yet."}
               </p>
 
               <p className="mt-2 text-sm leading-6 text-stone-500">
                 {journeyType ===
-                "profile_jobs"
+                  "profile_jobs"
                   ? `${technicalSkills.length} technical skill${technicalSkills.length === 1 ? "" : "s"} currently connected to your profile.`
                   : "Complete the selected journey setup to generate the next personalized steps."}
               </p>
@@ -1171,13 +1169,13 @@ const Overview = () => {
           initial={
             prefersReducedMotion
               ? {
-                  opacity: 1,
-                  y: 0,
-                }
+                opacity: 1,
+                y: 0,
+              }
               : {
-                  opacity: 0,
-                  y: 22,
-                }
+                opacity: 0,
+                y: 22,
+              }
           }
           animate={{
             opacity: 1,
@@ -1245,10 +1243,10 @@ const Overview = () => {
           <div className="relative z-10 mt-6 rounded-md bg-[#f2eee5] p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
               {journeyType ===
-              "learn"
+                "learn"
                 ? "Learning target"
                 : journeyType ===
-                    "dream_job"
+                  "dream_job"
                   ? "Dream job"
                   : "Profile jobs"}
             </p>
@@ -1259,10 +1257,10 @@ const Overview = () => {
 
             <p className="mt-2 text-sm leading-6 text-stone-500">
               {journeyType ===
-              "learn"
+                "learn"
                 ? `${missingSkills.length} skill${missingSkills.length === 1 ? "" : "s"} currently missing from your selected learning target.`
                 : journeyType ===
-                    "dream_job"
+                  "dream_job"
                   ? `${missingSkills.length} skill${missingSkills.length === 1 ? "" : "s"} currently missing for the selected career direction.`
                   : "Search external opportunities using the technical skills already stored in your profile."}
             </p>
@@ -1271,20 +1269,20 @@ const Overview = () => {
           <Link
             to={
               journeyType ===
-              "learn"
+                "learn"
                 ? "/courses-resources"
                 : journeyType ===
-                    "dream_job"
+                  "dream_job"
                   ? "/learning-roadmap"
                   : "/jobs/profile"
             }
             className="relative z-10 group mt-4 inline-flex min-h-9 items-center gap-2 rounded-md border border-stone-300 bg-white px-3 text-xs font-semibold text-stone-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-teal-800/30 hover:text-teal-950 hover:shadow-[0_6px_18px_rgba(28,25,23,0.05)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-800"
           >
             {journeyType ===
-            "learn"
+              "learn"
               ? "Explore resources"
               : journeyType ===
-                  "dream_job"
+                "dream_job"
                 ? "Open roadmap"
                 : "Explore jobs"}
 
@@ -1300,15 +1298,15 @@ const Overview = () => {
 
       {(warning ||
         (error && profile)) && (
-        <p
-          className="mt-5 text-xs text-amber-700"
-          role="status"
-          aria-live="polite"
-        >
-          Some overview data could not be refreshed:{" "}
-          {warning || error}
-        </p>
-      )}
+          <p
+            className="mt-5 text-xs text-amber-700"
+            role="status"
+            aria-live="polite"
+          >
+            Some overview data could not be refreshed:{" "}
+            {warning || error}
+          </p>
+        )}
     </div>
   );
 };
