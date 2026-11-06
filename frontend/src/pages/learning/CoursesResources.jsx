@@ -18,10 +18,10 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   getLearningCache,
   getLearningResources,
-  getMyPersonalizedRoadmap,
+  getMyPersonalizedLearningRoadmap,
 } from "../../services/learning.service";
 
-const pageEase = [0.22, 1, 0.36, 1];
+const pageEase = [0.22, 1, 1, 1];
 
 const normalizeText = (value) =>
   typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
@@ -561,7 +561,7 @@ const CoursesResources = () => {
 
       try {
         const roadmapResponse =
-          await getMyPersonalizedRoadmap();
+          await getMyPersonalizedLearningRoadmap();
 
         if (
           !roadmapResponse?.success
@@ -602,10 +602,12 @@ const CoursesResources = () => {
             ? personalizedRoadmap.steps.flatMap(
                 (step) =>
                   Array.isArray(
-                    step.skills
+                    step.technologies
                   )
-                    ? step.skills
-                    : []
+                    ? step.technologies
+                    : Array.isArray(step.skills)
+                      ? step.skills
+                      : []
               )
             : [];
 

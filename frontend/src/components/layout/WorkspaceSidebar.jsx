@@ -309,8 +309,9 @@ const WorkspaceSidebar = ({
         {/* Navigation */}
 
         <nav
-          className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+          className="min-h-0 flex-1 overflow-y-auto px-3 py-4 in-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden px-3 py-4 "
           aria-label="Workspace"
+          
         >
           <ul className="space-y-1">
             {navigation.map(
