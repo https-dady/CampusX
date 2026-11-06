@@ -17,7 +17,7 @@ function GoogleAuthButton({
         useOneTap={false}
         theme="outline"
         size="large"
-        width="100%"
+        width="400px"
         text="continue_with"
         shape="rectangular"
       />
