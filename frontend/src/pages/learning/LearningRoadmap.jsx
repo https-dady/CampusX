@@ -14,7 +14,7 @@ import {
 import { motion, useReducedMotion } from "framer-motion";
 
 import {
-  getMyPersonalizedRoadmap,
+  getMyPersonalizedLearningRoadmap,
 } from "../../services/learning.service";
 
 const pageEase = [0.22, 1, 0.36, 1];
@@ -48,93 +48,59 @@ const CursorCard = ({
 
     surface.style.transform = `
       perspective(1100px)
-      translate3d(${px * 4}px, ${py * 4 - 2}px, 0)
       rotateX(${-py * intensity}deg)
       rotateY(${px * intensity}deg)
+      translateY(-2px)
     `;
 
     surface.style.setProperty(
       "--cursor-x",
-      `${(x / rect.width) * 100}%`
+      `${x}px`
     );
 
     surface.style.setProperty(
       "--cursor-y",
-      `${(y / rect.height) * 100}%`
+      `${y}px`
     );
 
     surface.style.setProperty(
-      "--cursor-opacity",
-      "1"
+      "--cursor-color",
+      cursorColor
     );
   };
 
-  const resetSurface = (event) => {
-    if (prefersReducedMotion) return;
-
+  const handlePointerLeave = (event) => {
     const surface = event.currentTarget;
 
-    surface.style.transform = `
-      perspective(1100px)
-      translate3d(0, 0, 0)
-      rotateX(0deg)
-      rotateY(0deg)
-    `;
-
-    surface.style.setProperty(
-      "--cursor-opacity",
-      "0"
-    );
+    surface.style.transform = "";
   };
 
   return (
-    <motion.article
-      initial={
-        prefersReducedMotion
-          ? { opacity: 1, y: 0 }
-          : { opacity: 0, y: 22 }
-      }
-      animate={{ opacity: 1, y: 0 }}
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 18,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
       transition={{
-        duration: prefersReducedMotion ? 0 : 0.6,
-        delay: prefersReducedMotion ? 0 : delay,
+        duration: 0.55,
+        delay,
         ease: pageEase,
       }}
       onPointerMove={handlePointerMove}
-      onPointerLeave={resetSurface}
-      className={`
-        relative overflow-hidden
-        transition-[transform,box-shadow,border-color]
-        duration-300 ease-out
-        ${className}
-      `}
-      style={{
-        "--cursor-x": "50%",
-        "--cursor-y": "50%",
-        "--cursor-opacity": "0",
-      }}
+      onPointerLeave={handlePointerLeave}
+      className={[
+        "relative overflow-hidden transition-transform duration-300 ease-out",
+        className,
+      ].join(" ")}
     >
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-          absolute inset-0 z-0
-          opacity-[var(--cursor-opacity)]
-          transition-opacity duration-200
-        "
-        style={{
-          background: `radial-gradient(
-            circle 180px at var(--cursor-x) var(--cursor-y),
-            ${cursorColor},
-            transparent 72%
-          )`,
-        }}
-      />
+      <div className="pointer-events-none absolute inset-0 z-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-      <div className="relative z-10">
-        {children}
-      </div>
-    </motion.article>
+      {children}
+    </motion.div>
   );
 };
 
@@ -142,76 +108,99 @@ const getErrorMessage = (error) => {
   return (
     error?.response?.data?.message ||
     error?.message ||
-    "Unable to load your learning roadmap."
+    "Unable to load your personalized learning roadmap."
   );
 };
 
-const normalizeRoadmapSteps = (steps = []) => {
+const normalizeRoadmapSteps = (steps) => {
   if (!Array.isArray(steps)) {
     return [];
   }
 
-  return [...steps]
-    .filter(Boolean)
-    .sort(
-      (a, b) =>
-        Number(a?.order ?? 0) -
-        Number(b?.order ?? 0)
+  return steps.map((step, index) => {
+    const technologies = Array.isArray(
+      step?.technologies
     )
-    .map((step, index) => ({
+      ? step.technologies
+      : Array.isArray(step?.skills)
+        ? step.skills
+        : [];
+
+    return {
+      ...step,
+
       id:
         step?._id ||
         step?.id ||
-        `roadmap-step-${index + 1}`,
+        `learning-step-${index + 1}`,
 
       order:
-        Number.isFinite(Number(step?.order))
-          ? Number(step.order)
-          : index + 1,
-
-      phase: `Step ${index + 1}`,
+        step?.order ||
+        index + 1,
 
       title:
         step?.title ||
-        `Learning step ${index + 1}`,
+        step?.name ||
+        `Learning Step ${index + 1}`,
 
       description:
         step?.description ||
-        "Follow this step as part of your personalized learning roadmap.",
+        step?.overview ||
+        "Complete this learning stage to strengthen your skills.",
 
-      /*
-       * Backend learning roadmap uses `technologies`.
-       *
-       * `skills` is kept as a backward-compatible fallback
-       * in case older roadmap data still contains that field.
-       */
-      skills: Array.isArray(step?.technologies)
-        ? step.technologies.filter(
-            (skill) =>
-              typeof skill === "string" &&
-              skill.trim()
-          )
-        : Array.isArray(step?.skills)
-          ? step.skills.filter(
-              (skill) =>
-                typeof skill === "string" &&
-                skill.trim()
-            )
-          : [],
+      technologies,
 
-      resources: Array.isArray(step?.resources)
-        ? step.resources.filter(Boolean)
+      prerequisites: Array.isArray(
+        step?.prerequisites
+      )
+        ? step.prerequisites
         : [],
-    }));
+
+      resources: Array.isArray(
+        step?.resources
+      )
+        ? step.resources
+        : [],
+
+      estimatedDuration:
+        step?.estimatedDuration ||
+        step?.duration ||
+        null,
+    };
+  });
+};
+
+const getStepStatus = (step, index, completedSteps) => {
+  const stepId = String(
+    step?._id ||
+      step?.id ||
+      index
+  );
+
+  if (
+    completedSteps.includes(stepId) ||
+    step?.isCompleted === true ||
+    step?.status === "completed"
+  ) {
+    return "completed";
+  }
+
+  if (
+    step?.status === "in_progress" ||
+    step?.isCurrent === true
+  ) {
+    return "in_progress";
+  }
+
+  return "pending";
 };
 
 const LearningRoadmap = () => {
-  const prefersReducedMotion = useReducedMotion();
   const navigate = useNavigate();
 
-  const [roadmap, setRoadmap] = useState(null);
+  const prefersReducedMotion = useReducedMotion();
 
-  const [activeStep, setActiveStep] =
+  const [roadmap, setRoadmap] =
     useState(null);
 
   const [isLoading, setIsLoading] =
@@ -221,6 +210,9 @@ const LearningRoadmap = () => {
 
   const [isRetrying, setIsRetrying] =
     useState(false);
+
+  const [completedSteps, setCompletedSteps] =
+    useState([]);
 
   const loadRoadmap = async () => {
     setIsLoading(true);
@@ -236,7 +228,7 @@ const LearningRoadmap = () => {
        * GET /api/personalized-roadmap/learning/me
        */
       const personalizedResponse =
-        await getMyPersonalizedRoadmap();
+        await getMyPersonalizedLearningRoadmap();
 
       const personalizedRoadmap =
         personalizedResponse?.data?.roadmap;
@@ -275,7 +267,7 @@ const LearningRoadmap = () => {
     loadRoadmap();
   }, []);
 
-  const roadmapSteps = useMemo(
+  const steps = useMemo(
     () =>
       Array.isArray(roadmap?.steps)
         ? roadmap.steps
@@ -283,1216 +275,586 @@ const LearningRoadmap = () => {
     [roadmap]
   );
 
-  useEffect(() => {
-    if (!roadmapSteps.length) {
-      setActiveStep(null);
-      return;
-    }
+  const completedCount = useMemo(
+    () =>
+      steps.filter((step, index) => {
+        return (
+          getStepStatus(
+            step,
+            index,
+            completedSteps
+          ) === "completed"
+        );
+      }).length,
+    [steps, completedSteps]
+  );
 
-    setActiveStep((currentStep) => {
-      const stillExists = roadmapSteps.some(
-        (step) => step.id === currentStep
-      );
-
-      if (stillExists) {
-        return currentStep;
+  const progressPercentage = useMemo(
+    () => {
+      if (!steps.length) {
+        return 0;
       }
 
-      return roadmapSteps[0].id;
-    });
-  }, [roadmapSteps]);
+      return Math.round(
+        (completedCount / steps.length) * 100
+      );
+    },
+    [steps.length, completedCount]
+  );
 
-  const selectedStep =
-    roadmapSteps.find(
-      (step) => step.id === activeStep
-    ) || roadmapSteps[0];
+  const currentStep = useMemo(
+    () =>
+      steps.find((step, index) => {
+        return (
+          getStepStatus(
+            step,
+            index,
+            completedSteps
+          ) === "in_progress"
+        );
+      }) ||
+      steps.find((step, index) => {
+        return (
+          getStepStatus(
+            step,
+            index,
+            completedSteps
+          ) === "pending"
+        );
+      }) ||
+      null,
+    [steps, completedSteps]
+  );
 
-  const missingSkills = Array.isArray(
-    roadmap?.missingSkills
-  )
-    ? roadmap.missingSkills
-    : [];
-
-  const domainName =
-    roadmap?.domain || "Your learning goal";
-
-  const handleRetry = async () => {
+  const handleRetry = () => {
     setIsRetrying(true);
-    await loadRoadmap();
+    loadRoadmap();
   };
 
-  /*
-   * ------------------------------------------------------------------------
-   * LOADING STATE
-   * ------------------------------------------------------------------------
-   */
+  const handleOpenResources = () => {
+    navigate("/courses-resources");
+  };
+
+  const handleToggleComplete = (step, index) => {
+    const stepId = String(
+      step?._id ||
+        step?.id ||
+        index
+    );
+
+    setCompletedSteps((previous) => {
+      if (previous.includes(stepId)) {
+        return previous.filter(
+          (id) => id !== stepId
+        );
+      }
+
+      return [
+        ...previous,
+        stepId,
+      ];
+    });
+  };
 
   if (isLoading) {
     return (
-      <div className="mx-auto w-full max-w-[1216px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <motion.div
-          initial={
-            prefersReducedMotion
-              ? { opacity: 1 }
-              : { opacity: 0 }
-          }
-          animate={{ opacity: 1 }}
-          className="
-            flex min-h-[420px]
-            items-center justify-center
-          "
-        >
-          <div
-            className="
-              flex flex-col
-              items-center
-              text-center
-            "
+      <div className="min-h-screen bg-[#faf7f0] px-5 py-10 md:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 w-64 rounded-lg bg-stone-200" />
+
+            <div className="h-32 rounded-2xl bg-stone-200" />
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="h-52 rounded-2xl bg-stone-200" />
+              <div className="h-52 rounded-2xl bg-stone-200" />
+            </div>
+
+            <div className="h-72 rounded-2xl bg-stone-200" />
+          </div>
+
+          <p
+            className="mt-8 text-center text-sm text-stone-500"
             role="status"
             aria-live="polite"
           >
-            <div
-              className="
-                flex size-12
-                items-center justify-center
-                rounded-full
-                bg-[#dcefe9]
-                text-teal-950
-              "
-            >
-              <RefreshCw
-                size={20}
-                strokeWidth={1.8}
-                className="animate-spin"
-                aria-hidden="true"
-              />
-            </div>
-
-            <p
-              className="
-                mt-4
-                text-sm font-semibold
-                text-[#10231f]
-              "
-            >
-              Loading your roadmap...
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-xs
-                text-stone-500
-              "
-            >
-              Connecting your learning goal with your
-              personalized learning path.
-            </p>
-          </div>
-        </motion.div>
+            Preparing your personalized learning roadmap...
+          </p>
+        </div>
       </div>
     );
   }
 
-  /*
-   * ------------------------------------------------------------------------
-   * ERROR STATE
-   * ------------------------------------------------------------------------
-   */
-
-  if (error || !roadmap) {
+  if (error) {
     return (
-      <div className="mx-auto w-full max-w-[1216px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <motion.section
-          initial={
-            prefersReducedMotion
-              ? { opacity: 1, y: 0 }
-              : { opacity: 0, y: 18 }
-          }
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: prefersReducedMotion ? 0 : 0.55,
-            ease: pageEase,
-          }}
-          className="
-            mx-auto
-            flex min-h-[420px]
-            max-w-2xl
-            items-center
-            justify-center
-          "
-        >
-          <div
-            className="
-              w-full
-              rounded-xl
-              border border-red-200
-              bg-red-50
-              p-7
-              text-center
-              shadow-[0_10px_30px_rgba(127,29,29,0.04)]
-              sm:p-9
-            "
-            role="alert"
-          >
-            <div
-              className="
-                mx-auto
-                flex size-12
-                items-center justify-center
-                rounded-full
-                bg-white
-                text-red-700
-              "
-            >
-              <AlertCircle
-                size={22}
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
+      <div className="min-h-screen bg-[#faf7f0] px-5 py-12 md:px-8">
+        <div className="mx-auto max-w-2xl">
+          <div className="rounded-2xl border border-red-200 bg-white p-7 shadow-sm md:p-9">
+            <div className="flex size-12 items-center justify-center rounded-xl bg-red-50 text-red-600">
+              <AlertCircle size={23} />
             </div>
 
-            <h1
-              className="
-                mt-5
-                font-['Newsreader']
-                text-3xl
-                font-semibold
-                tracking-[-0.025em]
-                text-red-950
-              "
-            >
-              Your learning roadmap isn't
-              available yet.
+            <h1 className="mt-5 text-xl font-bold text-teal-950">
+              Unable to load your learning roadmap
             </h1>
 
-            <p
-              className="
-                mx-auto mt-3
-                max-w-lg
-                text-sm leading-6
-                text-red-800/80
-              "
-            >
-              {error ||
-                "We couldn't load your personalized learning roadmap."}
+            <p className="mt-3 text-sm leading-7 text-stone-600">
+              {error}
             </p>
 
-            <button
-              type="button"
-              onClick={handleRetry}
-              disabled={isRetrying}
-              className="
-                mt-6
-                inline-flex
-                min-h-10
-                items-center
-                justify-center
-                gap-2
-                rounded-md
-                bg-teal-950
-                px-4
-                text-sm
-                font-semibold
-                text-white
-                shadow-[0_7px_18px_rgba(6,78,59,0.10)]
-                transition-[background-color,box-shadow,transform]
-                duration-200
-                hover:-translate-y-0.5
-                hover:bg-teal-900
-                hover:shadow-[0_12px_25px_rgba(6,78,59,0.15)]
-                focus-visible:outline-2
-                focus-visible:outline-offset-4
-                focus-visible:outline-teal-800
-                disabled:cursor-not-allowed
-                disabled:opacity-60
-              "
-            >
-              <RefreshCw
-                size={15}
-                strokeWidth={1.8}
-                className={
-                  isRetrying
-                    ? "animate-spin"
-                    : ""
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-teal-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RefreshCw
+                  size={16}
+                  className={
+                    isRetrying
+                      ? "animate-spin"
+                      : ""
+                  }
+                />
+
+                {isRetrying
+                  ? "Retrying..."
+                  : "Try again"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  navigate("/learning-goal")
                 }
-                aria-hidden="true"
-              />
-
-              {isRetrying
-                ? "Trying again..."
-                : "Try again"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/learning-goal")}
-              className="
-                mt-3
-                inline-flex
-                min-h-10
-                items-center
-                justify-center
-                gap-2
-                rounded-md
-                border border-stone-200
-                bg-white
-                px-4
-                text-sm
-                font-semibold
-                text-stone-700
-                transition
-                hover:border-teal-800/20
-                hover:bg-[#f7faf8]
-                focus-visible:outline-2
-                focus-visible:outline-offset-4
-                focus-visible:outline-teal-800
-              "
-            >
-              Change learning goal
-            </button>
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-stone-200 bg-white px-5 text-sm font-semibold text-teal-900 transition-colors hover:bg-stone-50"
+              >
+                Update learning goal
+              </button>
+            </div>
           </div>
-        </motion.section>
+        </div>
       </div>
     );
   }
 
-  /*
-   * ------------------------------------------------------------------------
-   * EMPTY ROADMAP STATE
-   * ------------------------------------------------------------------------
-   */
-
-  if (!roadmapSteps.length) {
+  if (!roadmap || !steps.length) {
     return (
-      <div className="mx-auto w-full max-w-[1216px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-        <motion.section
-          initial={
-            prefersReducedMotion
-              ? { opacity: 1, y: 0 }
-              : { opacity: 0, y: 18 }
-          }
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: prefersReducedMotion ? 0 : 0.55,
-            ease: pageEase,
-          }}
-          className="
-            mx-auto
-            flex min-h-[420px]
-            max-w-2xl
-            items-center
-            justify-center
-          "
-        >
-          <div
-            className="
-              w-full
-              rounded-xl
-              border border-stone-200
-              bg-white
-              p-7
-              text-center
-              shadow-[0_10px_32px_rgba(28,25,23,0.04)]
-              sm:p-9
-            "
-          >
-            <div
-              className="
-                mx-auto
-                flex size-12
-                items-center justify-center
-                rounded-full
-                bg-[#dcefe9]
-                text-teal-950
-              "
-            >
-              <BookOpen
-                size={22}
-                strokeWidth={1.7}
-                aria-hidden="true"
-              />
-            </div>
-
-            <h1
-              className="
-                mt-5
-                font-['Newsreader']
-                text-3xl
-                font-semibold
-                tracking-[-0.025em]
-                text-[#10231f]
-              "
-            >
-              Your roadmap has no matched
-              learning steps yet.
-            </h1>
-
-            <p
-              className="
-                mx-auto mt-3
-                max-w-lg
-                text-sm leading-6
-                text-stone-500
-              "
-            >
-              Your selected learning goal is{" "}
-              <span className="font-semibold text-stone-700">
-                {domainName}
-              </span>
-              . We do not have any matched learning
-              steps for this goal yet.
-            </p>
-
-            {missingSkills.length > 0 && (
-              <div className="mt-5 flex flex-wrap justify-center gap-1.5">
-                {missingSkills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="
-                      rounded-full
-                      border border-stone-200
-                      bg-[#fffdf9]
-                      px-2.5 py-1
-                      text-[10px]
-                      font-semibold
-                      text-stone-500
-                    "
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleRetry}
-              disabled={isRetrying}
-              className="
-                mt-6
-                inline-flex
-                min-h-10
-                items-center
-                justify-center
-                gap-2
-                rounded-md
-                bg-teal-950
-                px-4
-                text-sm
-                font-semibold
-                text-white
-                transition
-                hover:bg-teal-900
-                focus-visible:outline-2
-                focus-visible:outline-offset-4
-                focus-visible:outline-teal-800
-                disabled:opacity-60
-              "
-            >
-              <RefreshCw
-                size={15}
-                strokeWidth={1.8}
-                className={
-                  isRetrying
-                    ? "animate-spin"
-                    : ""
-                }
-                aria-hidden="true"
-              />
-
-              Refresh roadmap
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate("/learning-goal")}
-              className="
-                mt-3
-                inline-flex
-                min-h-10
-                items-center
-                justify-center
-                gap-2
-                rounded-md
-                border border-stone-200
-                bg-white
-                px-4
-                text-sm
-                font-semibold
-                text-stone-700
-                transition
-                hover:border-teal-800/20
-                hover:bg-[#f7faf8]
-                focus-visible:outline-2
-                focus-visible:outline-offset-4
-                focus-visible:outline-teal-800
-              "
-            >
-              Change learning goal
-            </button>
+      <div className="min-h-screen bg-[#faf7f0] px-5 py-12 md:px-8">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-stone-200 bg-white p-8 text-center shadow-sm md:p-12">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-teal-50 text-teal-800">
+            <Target size={26} />
           </div>
-        </motion.section>
+
+          <h1 className="mt-5 text-2xl font-bold tracking-tight text-teal-950">
+            Your learning roadmap is being prepared
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-stone-600">
+            We couldn't find any learning steps for your current goal.
+            Update your learning preferences to continue.
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              navigate("/learning-goal")
+            }
+            className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-lg bg-teal-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-teal-800"
+          >
+            Update learning goal
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1216px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      {/* ================================================================ */}
-      {/* PAGE HEADER                                                       */}
-      {/* ================================================================ */}
+    <main className="min-h-screen bg-[#faf7f0] px-5 py-8 md:px-8 md:py-10">
+      <div className="mx-auto max-w-7xl">
+        {/* Header */}
 
-      <motion.section
-        initial={
-          prefersReducedMotion
-            ? { opacity: 1, y: 0 }
-            : { opacity: 0, y: 20 }
-        }
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: prefersReducedMotion ? 0 : 0.65,
-          ease: pageEase,
-        }}
-        aria-labelledby="roadmap-title"
-      >
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-          Learning roadmap
-        </p>
-
-        <div className="mt-2 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <motion.h1
-              initial={
-                prefersReducedMotion
-                  ? false
-                  : { opacity: 0, y: 14 }
-              }
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0 : 0.6,
-                delay: prefersReducedMotion ? 0 : 0.08,
-                ease: pageEase,
-              }}
-              id="roadmap-title"
-              className="
-                font-['Newsreader']
-                text-4xl font-semibold
-                leading-[1.02]
-                tracking-[-0.035em]
-                text-[#10231f]
-                sm:text-5xl
-              "
-            >
-              Know what to learn next.
-            </motion.h1>
-
-            <motion.p
-              initial={
-                prefersReducedMotion
-                  ? false
-                  : { opacity: 0, y: 12 }
-              }
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: prefersReducedMotion ? 0 : 0.55,
-                delay: prefersReducedMotion ? 0 : 0.17,
-                ease: pageEase,
-              }}
-              className="
-                mt-4 max-w-2xl
-                text-sm leading-6
-                text-stone-500
-                sm:text-[15px]
-              "
-            >
-              Follow a focused sequence based on
-              your selected learning goal and current
-              profile skills instead of trying to learn
-              everything at once.
-            </motion.p>
-          </div>
-
-          <motion.div
-            initial={
-              prefersReducedMotion
-                ? { opacity: 1, x: 0 }
-                : { opacity: 0, x: 12 }
-            }
-            animate={{ opacity: 1, x: 0 }}
-            transition={{
-              duration: prefersReducedMotion ? 0 : 0.55,
-              delay: prefersReducedMotion ? 0 : 0.24,
-              ease: pageEase,
-            }}
-            className="
-              inline-flex min-h-10
-              shrink-0 items-center gap-2
-              self-start rounded-md
-              border border-stone-200
-              bg-white px-3.5
-              text-xs font-semibold
-              text-stone-600
-              shadow-[0_3px_12px_rgba(28,25,23,0.04)]
-              sm:self-auto
-            "
-          >
-            <Target
-              size={15}
-              strokeWidth={1.7}
-              className="text-teal-900"
-              aria-hidden="true"
-            />
-
-            <span>
-              {domainName}
-            </span>
-          </motion.div>
-        </div>
-
-        <div className="mt-4 flex justify-start">
-          <button
-            type="button"
-            onClick={() => navigate("/learning-goal")}
-            className="
-              inline-flex min-h-9 items-center gap-2
-              rounded-md border border-stone-200
-              bg-white px-3.5
-              text-xs font-semibold text-stone-600
-              shadow-[0_3px_12px_rgba(28,25,23,0.04)]
-              transition
-              hover:border-teal-800/20
-              hover:bg-[#f7faf8]
-              hover:text-teal-950
-              focus-visible:outline-2
-              focus-visible:outline-offset-4
-              focus-visible:outline-teal-800
-            "
-          >
-            Change learning goal
-          </button>
-        </div>
-      </motion.section>
-
-      {/* ================================================================ */}
-      {/* ROADMAP SNAPSHOT                                                  */}
-      {/* ================================================================ */}
-
-      <CursorCard
-        intensity={2.3}
-        delay={0.25}
-        cursorColor="rgba(255,255,255,0.14)"
-        className="
-          mt-8
-          rounded-lg
-          border border-teal-950
-          bg-teal-950
-          p-6 text-white
-          shadow-[0_18px_45px_rgba(6,78,59,0.13)]
-          sm:p-8
-        "
-      >
-        <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-orange-300">
-              Personalized learning path
-            </p>
-
-            <h2 className="mt-2 font-['Newsreader'] text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">
-              Build towards {domainName}.
-            </h2>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-300">
-              Your roadmap is built from your selected
-              learning goal and current profile skills,
-              so the path stays focused on what you need
-              to learn next.
-            </p>
-          </div>
-
-          <div
-            className="
-              grid shrink-0
-              grid-cols-2
-              gap-2
-              sm:min-w-[300px]
-            "
-          >
-            <div
-              className="
-                rounded-md
-                border border-white/10
-                bg-white/[0.05]
-                px-4 py-3
-              "
-            >
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-stone-400">
-                Roadmap steps
-              </p>
-
-              <p className="mt-1 text-xl font-semibold text-white">
-                {roadmapSteps.length}
-              </p>
-            </div>
-
-            <div
-              className="
-                rounded-md
-                border border-white/10
-                bg-white/[0.05]
-                px-4 py-3
-              "
-            >
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-stone-400">
-                Missing skills
-              </p>
-
-              <p className="mt-1 text-xl font-semibold text-white">
-                {missingSkills.length}
-              </p>
-            </div>
-          </div>
-        </div>
-      </CursorCard>
-
-      {/* ================================================================ */}
-      {/* MISSING SKILLS                                                   */}
-      {/* ================================================================ */}
-
-      {missingSkills.length > 0 && (
-        <motion.section
-          initial={
-            prefersReducedMotion
-              ? { opacity: 1, y: 0 }
-              : { opacity: 0, y: 16 }
-          }
-          animate={{ opacity: 1, y: 0 }}
+        <motion.div
+          initial={{
+            opacity: 0,
+            y: 15,
+          }}
+          animate={{
+            opacity: 1,
+            y: 0,
+          }}
           transition={{
-            duration: prefersReducedMotion ? 0 : 0.55,
-            delay: prefersReducedMotion ? 0 : 0.3,
+            duration: 0.5,
             ease: pageEase,
           }}
-          className="mt-8"
-          aria-labelledby="missing-skills-title"
+          className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-end"
         >
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-              Skill gap
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-teal-200 bg-teal-50 px-3 py-1.5 text-xs font-semibold text-teal-800">
+              <Target size={14} />
+              Personalized Learning Journey
+            </div>
+
+            <h1 className="text-3xl font-bold tracking-tight text-teal-950 md:text-4xl">
+              Your Learning Roadmap
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-stone-600 md:text-base">
+              Follow your personalized learning path, complete each stage,
+              and build the skills needed to reach your goal.
             </p>
-
-            <h2
-              id="missing-skills-title"
-              className="
-                mt-2
-                font-['Newsreader']
-                text-3xl font-semibold
-                tracking-[-0.025em]
-                text-[#10231f]
-              "
-            >
-              Skills connected to your roadmap.
-            </h2>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            {missingSkills.map((skill, index) => (
-              <motion.span
-                key={skill}
-                initial={
-                  prefersReducedMotion
-                    ? false
-                    : {
-                        opacity: 0,
-                        y: 8,
-                      }
-                }
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  duration: prefersReducedMotion
-                    ? 0
-                    : 0.35,
-                  delay: prefersReducedMotion
-                    ? 0
-                    : index * 0.05,
-                  ease: pageEase,
-                }}
-                className="
-                  rounded-full
-                  border border-stone-200
-                  bg-white
-                  px-3 py-1.5
-                  text-[11px]
-                  font-semibold
-                  text-stone-600
-                  shadow-[0_3px_12px_rgba(28,25,23,0.03)]
-                "
-              >
-                {skill}
-              </motion.span>
-            ))}
-          </div>
-        </motion.section>
-      )}
-
-      {/* ================================================================ */}
-      {/* ROADMAP                                                           */}
-      {/* ================================================================ */}
-
-      <section
-        className="mt-8"
-        aria-labelledby="roadmap-steps-title"
-      >
-        <div className="mb-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-            Your path
-          </p>
-
-          <h2
-            id="roadmap-steps-title"
-            className="
-              mt-2
-              font-['Newsreader']
-              text-3xl font-semibold
-              tracking-[-0.025em]
-              text-[#10231f]
-            "
+          <button
+            type="button"
+            onClick={handleOpenResources}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-teal-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-teal-800"
           >
-            {roadmapSteps.length} focused{" "}
-            {roadmapSteps.length === 1
-              ? "step"
-              : "steps"}.
-          </h2>
-        </div>
+            Explore resources
+            <ArrowRight size={16} />
+          </button>
+        </motion.div>
 
-        <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-          {/* ============================================================ */}
-          {/* STEP LIST                                                      */}
-          {/* ============================================================ */}
+        {/* Roadmap overview */}
 
-          <div className="space-y-4">
-            {roadmapSteps.map((step, index) => {
-              const isSelected =
-                activeStep === step.id;
-
-              return (
-                <CursorCard
-                  key={step.id}
-                  intensity={2.1}
-                  delay={0.4 + index * 0.08}
-                  className={`
-                    rounded-lg
-                    border p-5
-                    shadow-[0_8px_28px_rgba(28,25,23,0.025)]
-                    ${
-                      isSelected
-                        ? "border-teal-950 bg-[#f7faf8] shadow-[0_15px_34px_rgba(6,78,59,0.07)]"
-                        : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-[0_16px_34px_rgba(28,25,23,0.07)]"
-                    }
-                  `}
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveStep(step.id)
-                    }
-                    aria-pressed={isSelected}
-                    className="
-                      block w-full
-                      text-left
-                      focus-visible:outline-2
-                      focus-visible:outline-offset-4
-                      focus-visible:outline-teal-800
-                    "
-                  >
-                    <div className="flex gap-4">
-                      <div
-                        className={`
-                          flex size-10
-                          shrink-0 items-center
-                          justify-center rounded-md
-                          ${
-                            isSelected
-                              ? "bg-orange-200 text-teal-950"
-                              : "bg-stone-100 text-stone-500"
-                          }
-                        `}
-                      >
-                        {isSelected ? (
-                          <BookOpen
-                            size={17}
-                            strokeWidth={1.7}
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <LockKeyhole
-                            size={16}
-                            strokeWidth={1.7}
-                            aria-hidden="true"
-                          />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-                            {step.phase}
-                          </p>
-
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-400">
-                            <Clock3
-                              size={13}
-                              strokeWidth={1.7}
-                              aria-hidden="true"
-                            />
-
-                            Order {step.order}
-                          </span>
-                        </div>
-
-                        <h3 className="mt-1.5 text-lg font-semibold tracking-[-0.02em] text-[#10231f]">
-                          {step.title}
-                        </h3>
-
-                        <p className="mt-2 text-sm leading-6 text-stone-500">
-                          {step.description}
-                        </p>
-
-                        {step.skills.length > 0 && (
-                          <div className="mt-4 flex flex-wrap gap-1.5">
-                            {step.skills.map(
-                              (skill) => (
-                                <span
-                                  key={skill}
-                                  className="
-                                    rounded-full
-                                    border border-stone-200
-                                    bg-white
-                                    px-2.5 py-1
-                                    text-[10px]
-                                    font-semibold
-                                    text-stone-500
-                                  "
-                                >
-                                  {skill}
-                                </span>
-                              )
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <ChevronRight
-                        size={17}
-                        strokeWidth={1.7}
-                        className={`
-                          mt-1
-                          shrink-0
-                          transition-transform
-                          duration-200
-                          ${
-                            isSelected
-                              ? "translate-x-0.5 text-teal-950"
-                              : "text-stone-300"
-                          }
-                        `}
-                        aria-hidden="true"
-                      />
-                    </div>
-                  </button>
-                </CursorCard>
-              );
-            })}
-          </div>
-
-          {/* ============================================================ */}
-          {/* SELECTED STEP                                                  */}
-          {/* ============================================================ */}
-
-          {selectedStep && (
-            <CursorCard
-              intensity={2.3}
-              delay={0.68}
-              cursorColor="rgba(15,118,110,0.08)"
-              className="
-                h-fit
-                rounded-lg
-                border border-stone-200
-                bg-white
-                p-6
-                shadow-[0_10px_32px_rgba(28,25,23,0.04)]
-                lg:sticky lg:top-[92px]
-                sm:p-8
-              "
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-                    Selected milestone
-                  </p>
-
-                  <h2 className="mt-2 font-['Newsreader'] text-3xl font-semibold leading-tight tracking-[-0.025em] text-[#10231f]">
-                    {selectedStep.title}
-                  </h2>
-                </div>
-
-                <motion.div
-                  animate={
-                    prefersReducedMotion
-                      ? undefined
-                      : {
-                          y: [0, -3, 0],
-                        }
-                  }
-                  transition={{
-                    duration: 3.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="
-                    flex size-10
-                    shrink-0
-                    items-center
-                    justify-center rounded-md
-                    bg-[#dcefe9]
-                    text-teal-950
-                  "
-                >
-                  <BookOpen
-                    size={18}
-                    strokeWidth={1.7}
-                    aria-hidden="true"
-                  />
-                </motion.div>
-              </div>
-
-              <p className="mt-4 text-sm leading-6 text-stone-500">
-                {selectedStep.description}
+        <CursorCard
+          className="group mb-7 rounded-2xl border border-teal-900/10 bg-[#073f33] p-6 text-white shadow-[0_16px_45px_rgba(7,63,51,0.10)] md:p-8"
+          intensity={1.4}
+          cursorColor="rgba(255,255,255,0.06)"
+        >
+          <div className="relative z-10 grid gap-7 lg:grid-cols-[1.3fr_0.7fr]">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange-200">
+                Your learning goal
               </p>
 
-              <div className="mt-6 border-t border-stone-100 pt-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-                    Focus skills
-                  </span>
+              <h2 className="mt-3 text-2xl font-bold tracking-tight md:text-3xl">
+                {roadmap.title ||
+                  roadmap.domain ||
+                  roadmap.name ||
+                  "Personalized Learning Path"}
+              </h2>
 
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-400">
-                    <Clock3
-                      size={13}
-                      strokeWidth={1.7}
-                      aria-hidden="true"
-                    />
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">
+                {roadmap.description ||
+                  roadmap.overview ||
+                  "Your personalized roadmap is designed to help you develop the skills required for your learning goal."}
+              </p>
 
-                    Order {selectedStep.order}
-                  </span>
-                </div>
-
-                {selectedStep.skills.length > 0 ? (
-                  <div className="mt-4 space-y-2">
-                    {selectedStep.skills.map(
-                      (skill, index) => (
-                        <motion.div
-                          key={skill}
-                          initial={
-                            prefersReducedMotion
-                              ? false
-                              : {
-                                  opacity: 0,
-                                  x: 8,
-                                }
-                          }
-                          animate={{
-                            opacity: 1,
-                            x: 0,
-                          }}
-                          transition={{
-                            duration:
-                              prefersReducedMotion
-                                ? 0
-                                : 0.35,
-                            delay:
-                              prefersReducedMotion
-                                ? 0
-                                : index * 0.06,
-                            ease: pageEase,
-                          }}
-                          className="
-                            flex min-h-10
-                            items-center gap-3
-                            rounded-md
-                            border border-stone-200
-                            bg-[#fffdf9]
-                            px-3.5
-                          "
-                        >
-                          <span
-                            className="
-                              flex size-5
-                              shrink-0
-                              items-center
-                              justify-center rounded-full
-                              bg-[#dcefe9]
-                              text-teal-950
-                            "
-                          >
-                            <Check
-                              size={12}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                            />
-                          </span>
-
-                          <span className="text-xs font-semibold text-stone-600">
-                            {skill}
-                          </span>
-                        </motion.div>
-                      )
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-4 text-sm text-stone-500">
-                    No specific skills were attached
-                    to this roadmap step.
-                  </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {(roadmap.targetSkills || []).map(
+                  (skill) => (
+                    <span
+                      key={skill}
+                      className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90"
+                    >
+                      {skill}
+                    </span>
+                  )
                 )}
               </div>
+            </div>
 
-              {/* RESOURCES */}
-              {selectedStep.resources.length >
-                0 && (
-                <div className="mt-6 border-t border-stone-100 pt-6">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-teal-950">
-                      Resources
-                    </span>
+            <div className="rounded-xl border border-white/10 bg-white/[0.07] p-5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white/70">
+                  Overall progress
+                </span>
 
-                    <span className="text-[11px] font-medium text-stone-400">
-                      {selectedStep.resources.length}
-                    </span>
+                <span className="text-2xl font-bold text-orange-200">
+                  {progressPercentage}%
+                </span>
+              </div>
+
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/15">
+                <motion.div
+                  initial={{
+                    width: 0,
+                  }}
+                  animate={{
+                    width: `${progressPercentage}%`,
+                  }}
+                  transition={{
+                    duration: 0.8,
+                    ease: pageEase,
+                  }}
+                  className="h-full rounded-full bg-orange-300"
+                />
+              </div>
+
+              <div className="mt-4 flex items-center justify-between text-xs text-white/65">
+                <span>
+                  {completedCount} completed
+                </span>
+
+                <span>
+                  {steps.length} total steps
+                </span>
+              </div>
+
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                  <BookOpen
+                    size={16}
+                    className="text-orange-200"
+                  />
+
+                  {currentStep
+                    ? currentStep.title
+                    : "All available steps completed"}
+                </div>
+
+                <p className="mt-1 pl-6 text-xs text-white/55">
+                  {currentStep
+                    ? "Your next learning milestone"
+                    : "Great work on your learning journey."}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CursorCard>
+
+        {/* Roadmap steps */}
+
+        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h2 className="text-xl font-bold text-teal-950">
+              Learning stages
+            </h2>
+
+            <p className="mt-1 text-sm text-stone-500">
+              Complete the stages in order to build your knowledge.
+            </p>
+          </div>
+
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-600">
+            <Clock3 size={14} />
+            {steps.length} learning stages
+          </span>
+        </div>
+
+        <div className="relative space-y-4">
+          <div className="absolute bottom-8 left-[23px] top-8 hidden w-px bg-stone-200 sm:block" />
+
+          {steps.map((step, index) => {
+            const status = getStepStatus(
+              step,
+              index,
+              completedSteps
+            );
+
+            const isCompleted =
+              status === "completed";
+
+            const isCurrent =
+              status === "in_progress";
+
+            const isLocked =
+              status === "pending" &&
+              index > 0 &&
+              !steps
+                .slice(0, index)
+                .every((previousStep, previousIndex) => {
+                  return (
+                    getStepStatus(
+                      previousStep,
+                      previousIndex,
+                      completedSteps
+                    ) === "completed"
+                  );
+                });
+
+            return (
+              <CursorCard
+                key={step.id}
+                className="group relative rounded-2xl border border-stone-200 bg-white p-5 shadow-[0_4px_18px_rgba(20,45,37,0.035)] transition-all hover:border-teal-900/20 hover:shadow-[0_12px_32px_rgba(20,45,37,0.07)] md:p-6"
+                delay={index * 0.06}
+                intensity={1}
+              >
+                <div className="relative z-10 flex flex-col gap-5 sm:flex-row">
+                  <div className="relative z-10 flex shrink-0 items-start">
+                    <div
+                      className={[
+                        "flex size-12 items-center justify-center rounded-xl border text-sm font-bold transition-colors",
+                        isCompleted
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : isCurrent
+                            ? "border-orange-200 bg-orange-50 text-orange-700"
+                            : "border-stone-200 bg-stone-50 text-stone-500",
+                      ].join(" ")}
+                    >
+                      {isCompleted ? (
+                        <Check size={20} />
+                      ) : isLocked ? (
+                        <LockKeyhole size={18} />
+                      ) : (
+                        String(index + 1).padStart(
+                          2,
+                          "0"
+                        )
+                      )}
+                    </div>
                   </div>
 
-                  <div className="mt-3 space-y-2">
-                    {selectedStep.resources.map(
-                      (resource, index) => {
-                        const resourceTitle =
-                          typeof resource ===
-                          "string"
-                            ? resource
-                            : resource?.title ||
-                              `Resource ${index + 1}`;
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]",
+                          isCompleted
+                            ? "bg-emerald-50 text-emerald-700"
+                            : isCurrent
+                              ? "bg-orange-50 text-orange-700"
+                              : "bg-stone-100 text-stone-500",
+                        ].join(" ")}
+                      >
+                        {isCompleted
+                          ? "Completed"
+                          : isCurrent
+                            ? "In progress"
+                            : "Upcoming"}
+                      </span>
 
-                        const resourceUrl =
-                          typeof resource ===
-                          "object"
-                            ? resource?.url
-                            : null;
+                      {step.estimatedDuration && (
+                        <span className="inline-flex items-center gap-1 text-xs text-stone-400">
+                          <Clock3 size={12} />
+                          {step.estimatedDuration}
+                        </span>
+                      )}
+                    </div>
 
-                        if (!resourceUrl) {
-                          return (
-                            <div
-                              key={`${resourceTitle}-${index}`}
-                              className="
-                                rounded-md
-                                border
-                                border-stone-200
-                                bg-[#fffdf9]
-                                px-3.5 py-3
-                              "
-                            >
-                              <p className="text-xs font-semibold text-stone-600">
-                                {resourceTitle}
-                              </p>
-                            </div>
-                          );
-                        }
+                    <h3 className="mt-3 text-lg font-bold tracking-tight text-teal-950">
+                      {step.title}
+                    </h3>
 
-                        return (
-                          <a
-                            key={`${resourceUrl}-${index}`}
-                            href={resourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="
-                              group
-                              flex items-center
-                              justify-between gap-3
-                              rounded-md
-                              border border-stone-200
-                              bg-[#fffdf9]
-                              px-3.5 py-3
-                              transition
-                              hover:border-teal-800/20
-                              hover:bg-[#f7faf8]
-                              focus-visible:outline-2
-                              focus-visible:outline-offset-2
-                              focus-visible:outline-teal-800
-                            "
-                          >
-                            <span className="min-w-0 text-xs font-semibold text-stone-600">
-                              {resourceTitle}
-                            </span>
+                    <p className="mt-2 text-sm leading-7 text-stone-600">
+                      {step.description}
+                    </p>
 
-                            <ArrowRight
-                              size={14}
-                              strokeWidth={1.8}
-                              aria-hidden="true"
-                              className="
-                                shrink-0
-                                text-stone-400
-                                transition-transform
-                                duration-200
-                                group-hover:translate-x-1
-                              "
-                            />
-                          </a>
-                        );
-                      }
+                    {step.technologies.length > 0 && (
+                      <div className="mt-4">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400">
+                          Skills covered
+                        </p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {step.technologies.map(
+                            (technology) => (
+                              <span
+                                key={technology}
+                                className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs font-medium text-stone-600"
+                              >
+                                {technology}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
                     )}
+
+                    {step.prerequisites.length > 0 && (
+                      <div className="mt-4">
+                        <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400">
+                          Prerequisites
+                        </p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {step.prerequisites.map(
+                            (prerequisite) => (
+                              <span
+                                key={prerequisite}
+                                className="rounded-md bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800"
+                              >
+                                {prerequisite}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleToggleComplete(
+                            step,
+                            index
+                          )
+                        }
+                        disabled={isLocked}
+                        className={[
+                          "inline-flex min-h-10 items-center gap-2 rounded-lg px-4 text-xs font-semibold transition-colors",
+                          isCompleted
+                            ? "border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                            : isLocked
+                              ? "cursor-not-allowed border border-stone-200 bg-stone-100 text-stone-400"
+                              : "bg-teal-900 text-white hover:bg-teal-800",
+                        ].join(" ")}
+                      >
+                        {isCompleted ? (
+                          <>
+                            <Check size={14} />
+                            Completed
+                          </>
+                        ) : isLocked ? (
+                          <>
+                            <LockKeyhole size={14} />
+                            Locked
+                          </>
+                        ) : (
+                          <>
+                            Mark as completed
+                            <ChevronRight size={14} />
+                          </>
+                        )}
+                      </button>
+
+                      {step.resources.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleOpenResources}
+                          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-stone-200 px-4 text-xs font-semibold text-teal-900 transition-colors hover:bg-stone-50"
+                        >
+                          <BookOpen size={14} />
+                          Explore resources
+                          <ArrowRight size={13} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <div className="mt-6">
-                <a
-                  href="/courses-resources"
-                  className="
-                    group
-                    inline-flex min-h-10
-                    w-full items-center
-                    justify-center gap-2
-                    rounded-md
-                    bg-teal-950 px-4
-                    text-sm font-semibold
-                    text-white
-                    shadow-[0_7px_18px_rgba(6,78,59,0.10)]
-                    transition-[background-color,box-shadow,transform]
-                    duration-200
-                    hover:-translate-y-0.5
-                    hover:bg-teal-900
-                    hover:shadow-[0_12px_25px_rgba(6,78,59,0.15)]
-                    focus-visible:outline-2
-                    focus-visible:outline-offset-4
-                    focus-visible:outline-teal-800
-                    active:translate-y-0
-                  "
-                >
-                  Explore courses
-
-                  <ArrowRight
-                    size={15}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                    className="transition-transform duration-200 group-hover:translate-x-1"
-                  />
-                </a>
-              </div>
-            </CursorCard>
-          )}
+              </CursorCard>
+            );
+          })}
         </div>
-      </section>
-    </div>
+
+        {/* Footer */}
+
+        <div className="mt-8 flex flex-col justify-between gap-4 rounded-2xl border border-stone-200 bg-white p-6 sm:flex-row sm:items-center">
+          <div>
+            <h3 className="font-bold text-teal-950">
+              Keep building your skills
+            </h3>
+
+            <p className="mt-1 text-sm text-stone-500">
+              Explore curated courses and learning resources for your journey.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleOpenResources}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-teal-900 px-5 text-sm font-semibold text-white transition-colors hover:bg-teal-800"
+          >
+            Courses & Resources
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </div>
+    </main>
   );
 };
 

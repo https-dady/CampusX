@@ -606,14 +606,19 @@ const getLearningContext = async (
     throw error;
   }
 
-  if (
-    user.onboarding?.status !==
-      "journey_selected" ||
-    user.onboarding?.journeyType !==
-      "learn"
-  ) {
+  const journeyType =
+    user.onboarding?.journeyType;
+
+  const canAccessLearningResources =
+    user.onboarding?.status ===
+      "journey_selected" &&
+    ["learn", "dream_job"].includes(
+      journeyType
+    );
+
+  if (!canAccessLearningResources) {
     const error = new Error(
-      "Learning resources are available only for the I WANT TO LEARN journey."
+      "Learning resources are available for the I WANT TO LEARN and DREAM JOB journeys."
     );
 
     error.statusCode = 400;
