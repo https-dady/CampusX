@@ -2,14 +2,27 @@ from pathlib import Path
 import os
 
 import joblib
+from huggingface_hub import hf_hub_download
 
+
+MODEL_REPO_ID = os.getenv(
+    "HF_MODEL_REPO_ID",
+    "bytDeveloper/campusx-ml-models"
+)
+
+MODEL_FILENAME = "career_model.joblib"
+
+MODEL_REVISION = os.getenv(
+    "HF_MODEL_REVISION",
+    "main"
+)
 
 MODEL_PATH = Path(
     os.getenv(
         "MODEL_PATH",
         Path(__file__).resolve().parents[2]
         / "models"
-        / "career_model.joblib",
+        / MODEL_FILENAME,
     )
 )
 
@@ -26,19 +39,47 @@ REQUIRED_ARTIFACT_KEYS = {
 _model_artifact = None
 
 
+def resolve_model_path():
+    """
+    Resolve the ML model path.
+
+    Use the local model when available.
+    Otherwise download it from Hugging Face.
+    """
+
+    if MODEL_PATH.is_file():
+        return MODEL_PATH
+
+    try:
+        downloaded_path = hf_hub_download(
+            repo_id=MODEL_REPO_ID,
+            filename=MODEL_FILENAME,
+            revision=MODEL_REVISION,
+            repo_type="model",
+        )
+
+        return Path(downloaded_path)
+
+    except Exception as error:
+        raise RuntimeError(
+            "Unable to download ML model from Hugging Face. "
+            f"Repository: {MODEL_REPO_ID}. "
+            f"File: {MODEL_FILENAME}. "
+            f"Error: {error}"
+        ) from error
+
+
 def load_model_artifact():
     global _model_artifact
 
     if _model_artifact is not None:
         return _model_artifact
 
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"ML model file not found: {MODEL_PATH}"
-        )
+    model_path = resolve_model_path()
 
     try:
-        artifact = joblib.load(MODEL_PATH)
+        artifact = joblib.load(model_path)
+
     except Exception as error:
         raise RuntimeError(
             f"Failed to load ML model: {error}"
@@ -90,30 +131,20 @@ def load_model_artifact():
 
 
 def get_model():
-    artifact = load_model_artifact()
-
-    return artifact["model"]
+    return load_model_artifact()["model"]
 
 
 def get_skill_encoder():
-    artifact = load_model_artifact()
-
-    return artifact["skill_encoder"]
+    return load_model_artifact()["skill_encoder"]
 
 
 def get_interest_encoder():
-    artifact = load_model_artifact()
-
-    return artifact["interest_encoder"]
+    return load_model_artifact()["interest_encoder"]
 
 
 def get_categorical_encoder():
-    artifact = load_model_artifact()
-
-    return artifact["categorical_encoder"]
+    return load_model_artifact()["categorical_encoder"]
 
 
 def get_feature_columns():
-    artifact = load_model_artifact()
-
-    return artifact["feature_columns"]
+    return load_model_artifact()["feature_columns"]
