@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: campusx-n8n
+    runtime: image
+    plan: free
+
+    image:
+      url: docker.io/n8nio/n8n:latest
+
+    envVars:
+      - key: PORT
+        value: "5678"
+
+      - key: N8N_PORT
+        value: "5678"
+
+      - key: N8N_PROTOCOL
+        value: https
+
+      - key: N8N_ENCRYPTION_KEY
+        generateValue: true
+
+      - key: DB_TYPE
+        value: postgresdb
+
+      - key: DB_POSTGRESDB_DATABASE
+        fromDatabase:
+          name: campusx-n8n-db
+          property: database
+
+      - key: DB_POSTGRESDB_HOST
+        fromDatabase:
+          name: campusx-n8n-db
+          property: host
+
+      - key: DB_POSTGRESDB_PASSWORD
+        fromDatabase:
+          name: campusx-n8n-db
+          property: password
+
+      - key: DB_POSTGRESDB_USER
+        fromDatabase:
+          name: campusx-n8n-db
+          property: user
+
+databases:
+  - name: campusx-n8n-db
+    plan: free
