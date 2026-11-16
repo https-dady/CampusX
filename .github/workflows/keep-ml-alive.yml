@@ -1,6 +1,10 @@
 name: Keep CampusX ML Service Alive
 
 on:
+  push:
+    branches:
+      - main
+
   schedule:
     - cron: "*/10 * * * *"
 
