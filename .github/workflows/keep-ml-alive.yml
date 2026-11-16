@@ -1,0 +1,28 @@
+name: Keep CampusX ML Service Alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping CampusX ML Health Endpoint
+        run: |
+          echo "Pinging CampusX ML Service..."
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-delay 10 \
+            --max-time 60 \
+            "${{ secrets.ML_SERVICE_URL }}/health"
+
+          echo ""
+          echo "CampusX ML Health Check Completed!"
